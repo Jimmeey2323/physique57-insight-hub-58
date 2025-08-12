@@ -24,7 +24,7 @@ export const DiscountRevenueAnalysis: React.FC<DiscountRevenueAnalysisProps> = (
 
     const rangeData = discountRanges.map(range => {
       const itemsInRange = data.filter(item => {
-        const discountPercent = item.grossDiscountPercent || 0;
+        const discountPercent = item.discountPercentage || 0;
         if (range.min === 0 && range.max === 0) {
           return discountPercent === 0;
         }
@@ -54,7 +54,7 @@ export const DiscountRevenueAnalysis: React.FC<DiscountRevenueAnalysisProps> = (
     return data
       .filter(item => (item.discountAmount || 0) > 0)
       .map(item => ({
-        discountPercent: item.grossDiscountPercent || 0,
+        discountPercent: item.discountPercentage || 0,
         revenue: item.grossRevenue || 0,
         discountAmount: item.discountAmount || 0,
         product: item.cleanedProduct

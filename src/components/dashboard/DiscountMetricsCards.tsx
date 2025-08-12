@@ -26,8 +26,8 @@ export const DiscountMetricsCards: React.FC<DiscountMetricsCardsProps> = ({ data
         if (filters.paymentMethod && item.paymentMethod !== filters.paymentMethod) return false;
         if (filters.minDiscountAmount && (item.discountAmount || 0) < filters.minDiscountAmount) return false;
         if (filters.maxDiscountAmount && (item.discountAmount || 0) > filters.maxDiscountAmount) return false;
-        if (filters.minDiscountPercent && (item.grossDiscountPercent || 0) < filters.minDiscountPercent) return false;
-        if (filters.maxDiscountPercent && (item.grossDiscountPercent || 0) > filters.maxDiscountPercent) return false;
+        if (filters.minDiscountPercent && (item.discountPercentage || 0) < filters.minDiscountPercent) return false;
+        if (filters.maxDiscountPercent && (item.discountPercentage || 0) > filters.maxDiscountPercent) return false;
         if (filters.dateRange?.from || filters.dateRange?.to) {
           const itemDate = new Date(item.paymentDate);
           if (filters.dateRange.from && itemDate < filters.dateRange.from) return false;
@@ -42,7 +42,7 @@ export const DiscountMetricsCards: React.FC<DiscountMetricsCardsProps> = ({ data
     
     const totalDiscountAmount = discountedTransactions.reduce((sum, item) => sum + (item.discountAmount || 0), 0);
     const totalRevenue = filteredData.reduce((sum, item) => sum + (item.paymentValue || 0), 0);
-    const totalPotentialRevenue = filteredData.reduce((sum, item) => sum + (item.postTaxMrp || item.paymentValue || 0), 0);
+    const totalPotentialRevenue = filteredData.reduce((sum, item) => sum + (item.mrpPostTax || item.paymentValue || 0), 0);
     
     const discountPenetration = totalTransactions > 0 ? (discountedTransactions.length / totalTransactions) * 100 : 0;
     const avgDiscountPerTransaction = discountedTransactions.length > 0 ? totalDiscountAmount / discountedTransactions.length : 0;
@@ -52,7 +52,7 @@ export const DiscountMetricsCards: React.FC<DiscountMetricsCardsProps> = ({ data
     // Additional metrics
     const uniqueCustomersWithDiscounts = new Set(discountedTransactions.map(item => item.customerEmail)).size;
     const avgDiscountPercent = discountedTransactions.length > 0 
-      ? discountedTransactions.reduce((sum, item) => sum + (item.grossDiscountPercent || 0), 0) / discountedTransactions.length 
+      ? discountedTransactions.reduce((sum, item) => sum + (item.discountPercentage || 0), 0) / discountedTransactions.length 
       : 0;
 
     // Top discount categories

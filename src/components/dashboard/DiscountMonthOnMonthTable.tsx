@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ModernDataTable } from '@/components/ui/ModernDataTable';
@@ -27,8 +26,8 @@ export const DiscountMonthOnMonthTable: React.FC<DiscountMonthOnMonthTableProps>
         if (filters.paymentMethod && item.paymentMethod !== filters.paymentMethod) return false;
         if (filters.minDiscountAmount && (item.discountAmount || 0) < filters.minDiscountAmount) return false;
         if (filters.maxDiscountAmount && (item.discountAmount || 0) > filters.maxDiscountAmount) return false;
-        if (filters.minDiscountPercent && (item.grossDiscountPercent || 0) < filters.minDiscountPercent) return false;
-        if (filters.maxDiscountPercent && (item.grossDiscountPercent || 0) > filters.maxDiscountPercent) return false;
+        if (filters.minDiscountPercent && (item.discountPercentage || 0) < filters.minDiscountPercent) return false;
+        if (filters.maxDiscountPercent && (item.discountPercentage || 0) > filters.maxDiscountPercent) return false;
         if (filters.dateRange?.from || filters.dateRange?.to) {
           const itemDate = new Date(item.paymentDate);
           if (filters.dateRange.from && itemDate < filters.dateRange.from) return false;
@@ -60,9 +59,9 @@ export const DiscountMonthOnMonthTable: React.FC<DiscountMonthOnMonthTableProps>
       acc[monthKey].transactions += 1;
       acc[monthKey].totalDiscount += item.discountAmount || 0;
       acc[monthKey].totalRevenue += item.paymentValue || 0;
-      acc[monthKey].totalPotentialRevenue += item.postTaxMrp || item.paymentValue || 0;
+      acc[monthKey].totalPotentialRevenue += item.mrpPostTax || item.paymentValue || 0;
       acc[monthKey].uniqueCustomers.add(item.customerEmail);
-      acc[monthKey].discountPercentages.push(item.grossDiscountPercent || 0);
+      acc[monthKey].discountPercentages.push(item.discountPercentage || 0);
 
       // Track top category
       const category = item.cleanedCategory || 'Unknown';

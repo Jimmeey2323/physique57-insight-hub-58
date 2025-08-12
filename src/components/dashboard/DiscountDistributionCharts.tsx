@@ -26,8 +26,8 @@ export const DiscountDistributionCharts: React.FC<DiscountDistributionChartsProp
         if (filters.paymentMethod && item.paymentMethod !== filters.paymentMethod) return false;
         if (filters.minDiscountAmount && (item.discountAmount || 0) < filters.minDiscountAmount) return false;
         if (filters.maxDiscountAmount && (item.discountAmount || 0) > filters.maxDiscountAmount) return false;
-        if (filters.minDiscountPercent && (item.grossDiscountPercent || 0) < filters.minDiscountPercent) return false;
-        if (filters.maxDiscountPercent && (item.grossDiscountPercent || 0) > filters.maxDiscountPercent) return false;
+        if (filters.minDiscountPercent && (item.discountPercentage || 0) < filters.minDiscountPercent) return false;
+        if (filters.maxDiscountPercent && (item.discountPercentage || 0) > filters.maxDiscountPercent) return false;
         if (filters.dateRange?.from || filters.dateRange?.to) {
           const itemDate = new Date(item.paymentDate);
           if (filters.dateRange.from && itemDate < filters.dateRange.from) return false;

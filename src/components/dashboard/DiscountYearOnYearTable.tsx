@@ -27,8 +27,8 @@ export const DiscountYearOnYearTable: React.FC<DiscountYearOnYearTableProps> = (
         if (filters.paymentMethod && item.paymentMethod !== filters.paymentMethod) return false;
         if (filters.minDiscountAmount && (item.discountAmount || 0) < filters.minDiscountAmount) return false;
         if (filters.maxDiscountAmount && (item.discountAmount || 0) > filters.maxDiscountAmount) return false;
-        if (filters.minDiscountPercent && (item.grossDiscountPercent || 0) < filters.minDiscountPercent) return false;
-        if (filters.maxDiscountPercent && (item.grossDiscountPercent || 0) > filters.maxDiscountPercent) return false;
+        if (filters.minDiscountPercent && (item.discountPercentage || 0) < filters.minDiscountPercent) return false;
+        if (filters.maxDiscountPercent && (item.discountPercentage || 0) > filters.maxDiscountPercent) return false;
         return true;
       });
     }
@@ -59,9 +59,9 @@ export const DiscountYearOnYearTable: React.FC<DiscountYearOnYearTableProps> = (
       acc[key].years[year].transactions += 1;
       acc[key].years[year].totalDiscount += item.discountAmount || 0;
       acc[key].years[year].totalRevenue += item.paymentValue || 0;
-      acc[key].years[year].totalPotentialRevenue += item.postTaxMrp || item.paymentValue || 0;
+      acc[key].years[year].totalPotentialRevenue += item.mrpPostTax || item.paymentValue || 0;
       acc[key].years[year].uniqueCustomers.add(item.customerEmail);
-      acc[key].years[year].discountPercentages.push(item.grossDiscountPercent || 0);
+      acc[key].years[year].discountPercentages.push(item.discountPercentage || 0);
 
       return acc;
     }, {} as Record<string, any>);

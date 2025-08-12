@@ -38,9 +38,9 @@ const DiscountsPromotions = () => {
     const discountedTransactions = discountedData.length;
     const uniqueMembers = new Set(discountedData.map(item => item.customerEmail)).size;
     const unitsSold = discountedData.length; // Each transaction represents units sold
-    const totalDiscountPercentages = discountedData.reduce((sum, item) => sum + (item.grossDiscountPercent || 0), 0);
+    const totalDiscountPercentages = discountedData.reduce((sum, item) => sum + (item.discountPercentage || 0), 0);
     const avgDiscountPercentage = discountedTransactions > 0 ? totalDiscountPercentages / discountedTransactions : 0;
-    const totalRevenueLost = discountedData.reduce((sum, item) => sum + ((item.postTaxMrp || item.preTaxMrp || item.paymentValue || 0) - (item.paymentValue || 0)), 0);
+    const totalRevenueLost = discountedData.reduce((sum, item) => sum + ((item.mrpPostTax || item.mrpPreTax || item.paymentValue || 0) - (item.paymentValue || 0)), 0);
 
     return {
       totalDiscountValue,
