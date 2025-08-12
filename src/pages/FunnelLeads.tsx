@@ -1,24 +1,31 @@
 
 import React, { useState, useMemo } from 'react';
-import { ImprovedLeadsSection } from '@/components/dashboard/ImprovedLeadsSection';
-import { FunnelLeadsFilterSection } from '@/components/dashboard/FunnelLeadsFilterSection';
-import { ImprovedLeadYearOnYearTable } from '@/components/dashboard/ImprovedLeadYearOnYearTable';
-import { LeadMonthOnMonthAnalytics } from '@/components/dashboard/LeadMonthOnMonthAnalytics';
 import { useNavigate } from 'react-router-dom';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Home, Filter, Database, Eye, BarChart3, TrendingUp, Users, Target, TrendingDown, Calendar } from 'lucide-react';
+import { Home, Filter, Database, Eye, BarChart3, TrendingUp, Users, Target, TrendingDown, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { Footer } from '@/components/ui/footer';
 import { cn } from '@/lib/utils';
 import { LeadsFilterOptions, LeadsData } from '@/types/leads';
 import { GlobalFiltersProvider } from '@/contexts/GlobalFiltersContext';
 import { getPreviousMonthDateRange } from '@/utils/dateUtils';
+import { FunnelLeadsFilterSection } from '@/components/dashboard/FunnelLeadsFilterSection';
+import { FunnelMetricCards } from '@/components/dashboard/FunnelMetricCards';
+import { FunnelInteractiveCharts } from '@/components/dashboard/FunnelInteractiveCharts';
+import { FunnelSourceRankings } from '@/components/dashboard/FunnelSourceRankings';
+import { FunnelStageRankings } from '@/components/dashboard/FunnelStageRankings';
+import { FunnelMonthOnMonthTable } from '@/components/dashboard/FunnelMonthOnMonthTable';
+import { FunnelYearOnYearTable } from '@/components/dashboard/FunnelYearOnYearTable';
+import { FunnelStagePerformanceTable } from '@/components/dashboard/FunnelStagePerformanceTable';
+import { FunnelHealthMetricsTable } from '@/components/dashboard/FunnelHealthMetricsTable';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const FunnelLeads = () => {
   const navigate = useNavigate();
   const { data: leadsData, loading, error } = useLeadsData();
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [filters, setFilters] = useState<LeadsFilterOptions>(() => {
     const previousMonth = getPreviousMonthDateRange();
@@ -96,63 +103,6 @@ const FunnelLeads = () => {
     });
   }, [leadsData, filters]);
 
-  // Process year-on-year data for month-wise comparison
-  const yearOnYearData = useMemo(() => {
-    if (!filteredLeadsData.length) return { data: {}, years: [], sources: [] };
-
-    const processedData: Record<string, Record<string, any>> = {};
-    const yearsSet = new Set<string>();
-    const sourcesSet = new Set<string>();
-
-    filteredLeadsData.forEach(lead => {
-      if (!lead.createdAt) return;
-
-      const date = new Date(lead.createdAt);
-      const year = date.getFullYear().toString();
-      const month = date.getMonth() + 1;
-      const monthYear = `${year}-${month.toString().padStart(2, '0')}`;
-      const source = lead.source || 'Unknown';
-
-      yearsSet.add(year);
-      sourcesSet.add(source);
-
-      if (!processedData[source]) {
-        processedData[source] = {};
-      }
-
-      if (!processedData[source][monthYear]) {
-        processedData[source][monthYear] = {
-          totalLeads: 0,
-          convertedLeads: 0,
-          trialsCompleted: 0,
-          lostLeads: 0,
-          totalRevenue: 0
-        };
-      }
-
-      processedData[source][monthYear].totalLeads += 1;
-      processedData[source][monthYear].totalRevenue += lead.ltv || 0;
-
-      if (lead.conversionStatus === 'Converted') {
-        processedData[source][monthYear].convertedLeads += 1;
-      }
-
-      if (lead.stage === 'Trial Completed') {
-        processedData[source][monthYear].trialsCompleted += 1;
-      }
-
-      if (lead.status === 'Lost' || lead.conversionStatus === 'Lost') {
-        processedData[source][monthYear].lostLeads += 1;
-      }
-    });
-
-    return {
-      data: processedData,
-      years: Array.from(yearsSet).sort(),
-      sources: Array.from(sourcesSet).sort()
-    };
-  }, [filteredLeadsData]);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 flex items-center justify-center">
@@ -218,7 +168,7 @@ const FunnelLeads = () => {
                 </h1>
                 
                 <p className="text-xl text-blue-100 max-w-3xl mx-auto leading-relaxed animate-fade-in-up delay-300 font-medium">
-                  Comprehensive lead generation analysis with month-wise year-on-year conversion tracking, funnel optimization, 
+                  Comprehensive lead generation analysis with conversion tracking, funnel optimization, 
                   and performance insights across all channels and associates
                 </p>
                 
@@ -268,44 +218,62 @@ const FunnelLeads = () => {
           </div>
         </div>
 
-        {/* Filter Section */}
-        <div className="container mx-auto px-6 py-8">
-          <FunnelLeadsFilterSection
-            filters={filters}
-            onFiltersChange={setFilters}
-            uniqueValues={uniqueValues}
-          />
-        </div>
+        <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+          {/* Collapsible Filter Section */}
+          <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-slate-50/50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-slate-800">
+                      <Filter className="w-5 h-5 text-blue-600" />
+                      Advanced Filters
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-blue-600 border-blue-200">
+                        {Object.values(filters).flat().filter(Boolean).length} Active
+                      </Badge>
+                      {filtersOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </div>
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent>
+                  <FunnelLeadsFilterSection
+                    filters={filters}
+                    onFiltersChange={setFilters}
+                    uniqueValues={uniqueValues}
+                  />
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
 
-        {/* Month-on-Month Analytics */}
-        <div className="container mx-auto px-6 pb-8">
-          <LeadMonthOnMonthAnalytics
-            data={filteredLeadsData}
-            filters={filters}
-          />
-        </div>
+          {/* Metric Cards */}
+          <FunnelMetricCards data={filteredLeadsData} />
 
-        {/* Year-on-Year Month-wise Analysis */}
-        <div className="container mx-auto px-6 pb-8">
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-slate-800">
-                <BarChart3 className="w-5 h-5 text-blue-600" />
-                Month-wise Year-on-Year Lead Analysis
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ImprovedLeadYearOnYearTable
-                data={yearOnYearData.data}
-                years={yearOnYearData.years}
-                sources={yearOnYearData.sources}
-              />
-            </CardContent>
-          </Card>
-        </div>
+          {/* Interactive Charts */}
+          <FunnelInteractiveCharts data={filteredLeadsData} />
 
-        {/* Main Leads Section */}
-        <ImprovedLeadsSection />
+          {/* Rankings Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <FunnelSourceRankings data={filteredLeadsData} />
+            <FunnelStageRankings data={filteredLeadsData} />
+          </div>
+
+          {/* Month on Month Table */}
+          <FunnelMonthOnMonthTable data={filteredLeadsData} />
+
+          {/* Year on Year Table */}
+          <FunnelYearOnYearTable data={filteredLeadsData} />
+
+          {/* Stage Performance and Health Tables */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <FunnelStagePerformanceTable data={filteredLeadsData} />
+            <FunnelHealthMetricsTable data={filteredLeadsData} />
+          </div>
+        </div>
         
         <Footer />
 
