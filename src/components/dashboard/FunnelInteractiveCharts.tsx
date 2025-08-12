@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
-import { TrendingUp, BarChart3, PieChart as PieChartIcon, Users, Target, Calendar, Filter } from 'lucide-react';
+import { TrendingUp, BarChart3, PieChart as PieChartIcon, Users, Target, Calendar } from 'lucide-react';
 import { LeadsData } from '@/types/leads';
-import { formatNumber, formatCurrency, formatPercentage } from '@/utils/formatters';
+import { formatCurrency } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 
 interface FunnelInteractiveChartsProps {
@@ -120,15 +120,6 @@ export const FunnelInteractiveCharts: React.FC<FunnelInteractiveChartsProps> = (
       .sort((a, b) => b.value - a.value);
   }, [data]);
 
-  const getChartTitle = () => {
-    const typeMap = {
-      source: 'Source Analysis',
-      stage: 'Stage Analysis', 
-      timeline: 'Timeline Analysis'
-    };
-    return typeMap[chartType];
-  };
-
   const getMetricValue = (item: any) => {
     switch (metricType) {
       case 'volume': return item.volume;
@@ -150,15 +141,15 @@ export const FunnelInteractiveCharts: React.FC<FunnelInteractiveChartsProps> = (
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg">
-          <p className="font-semibold text-slate-800">{label}</p>
+        <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-xl backdrop-blur-sm">
+          <p className="font-semibold text-slate-800 mb-2">{label}</p>
           <p className="text-sm text-slate-600">
             {getMetricLabel()}: {
               metricType === 'ltv' 
                 ? formatCurrency(payload[0].value)
                 : metricType === 'conversion'
                 ? `${payload[0].value.toFixed(1)}%`
-                : formatNumber(payload[0].value)
+                : payload[0].value.toLocaleString('en-IN')
             }
           </p>
         </div>
@@ -171,10 +162,10 @@ export const FunnelInteractiveCharts: React.FC<FunnelInteractiveChartsProps> = (
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg">
-          <p className="font-semibold text-slate-800">{data.name}</p>
+        <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-xl backdrop-blur-sm">
+          <p className="font-semibold text-slate-800 mb-2">{data.name}</p>
           <p className="text-sm text-slate-600">
-            Count: {formatNumber(data.value)} ({data.percentage}%)
+            Count: {data.value.toLocaleString('en-IN')} ({data.percentage}%)
           </p>
         </div>
       );
@@ -184,36 +175,30 @@ export const FunnelInteractiveCharts: React.FC<FunnelInteractiveChartsProps> = (
 
   if (!data || !data.length) {
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-          <CardContent className="p-6">
-            <div className="text-center py-8 text-slate-500">
-              No data available for charts
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-          <CardContent className="p-6">
-            <div className="text-center py-8 text-slate-500">
-              No data available for charts
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="w-full bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+        <CardContent className="p-12">
+          <div className="text-center py-8 text-slate-500">
+            <BarChart3 className="w-16 h-16 mx-auto mb-4 opacity-50" />
+            <p className="text-lg font-medium">No data available for charts</p>
+            <p className="text-sm">Adjust your filters to see analytics</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Main Chart */}
-      <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-        <CardHeader>
-          <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      {/* Main Chart - Full Width */}
+      <Card className="w-full bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+        <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 border-b">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <CardTitle className="flex items-center gap-2 text-slate-800">
               <BarChart3 className="w-6 h-6 text-blue-600 animate-pulse" />
-              {getChartTitle()}
+              {chartType === 'source' ? 'Source Analysis' : chartType === 'stage' ? 'Stage Analysis' : 'Timeline Analysis'}
             </CardTitle>
-            <div className="flex gap-2">
+            
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant={chartType === 'source' ? 'default' : 'outline'}
                 size="sm"
@@ -244,35 +229,42 @@ export const FunnelInteractiveCharts: React.FC<FunnelInteractiveChartsProps> = (
             </div>
           </div>
           
-          <div className="flex gap-2 mt-2">
+          <div className="flex flex-wrap gap-2 mt-4">
             <Badge 
               variant={metricType === 'volume' ? 'default' : 'outline'}
-              className="cursor-pointer"
+              className="cursor-pointer transition-all duration-200 hover:scale-105"
               onClick={() => setMetricType('volume')}
             >
               Volume
             </Badge>
             <Badge 
               variant={metricType === 'conversion' ? 'default' : 'outline'}
-              className="cursor-pointer"
+              className="cursor-pointer transition-all duration-200 hover:scale-105"
               onClick={() => setMetricType('conversion')}
             >
               Conversion
             </Badge>
             <Badge 
               variant={metricType === 'ltv' ? 'default' : 'outline'}
-              className="cursor-pointer"
+              className="cursor-pointer transition-all duration-200 hover:scale-105"
               onClick={() => setMetricType('ltv')}
             >
               LTV
             </Badge>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="h-80">
+        
+        <CardContent className="p-8">
+          <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               {chartType === 'timeline' ? (
                 <LineChart data={chartData}>
+                  <defs>
+                    <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis 
                     dataKey="name" 
@@ -287,12 +279,19 @@ export const FunnelInteractiveCharts: React.FC<FunnelInteractiveChartsProps> = (
                     dataKey={metricType} 
                     stroke="#3b82f6" 
                     strokeWidth={3}
-                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, fill: '#1d4ed8' }}
+                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 5 }}
+                    activeDot={{ r: 8, fill: '#1d4ed8', stroke: '#white', strokeWidth: 2 }}
+                    fill="url(#lineGradient)"
                   />
                 </LineChart>
               ) : (
                 <BarChart data={chartData}>
+                  <defs>
+                    <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.9}/>
+                      <stop offset="95%" stopColor="#1d4ed8" stopOpacity={0.7}/>
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis 
                     dataKey="name" 
@@ -300,14 +299,14 @@ export const FunnelInteractiveCharts: React.FC<FunnelInteractiveChartsProps> = (
                     fontSize={12}
                     angle={-45}
                     textAnchor="end"
-                    height={60}
+                    height={80}
                   />
                   <YAxis stroke="#64748b" fontSize={12} />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar 
                     dataKey={metricType} 
-                    fill="#3b82f6"
-                    radius={[4, 4, 0, 0]}
+                    fill="url(#barGradient)"
+                    radius={[6, 6, 0, 0]}
                   />
                 </BarChart>
               )}
@@ -316,39 +315,44 @@ export const FunnelInteractiveCharts: React.FC<FunnelInteractiveChartsProps> = (
         </CardContent>
       </Card>
 
-      {/* Pie Chart */}
-      <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-        <CardHeader>
+      {/* Pie Chart - Full Width */}
+      <Card className="w-full bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+        <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
           <CardTitle className="flex items-center gap-2 text-slate-800">
             <PieChartIcon className="w-6 h-6 text-purple-600 animate-pulse" />
             Conversion Status Distribution
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-80">
+        <CardContent className="p-8">
+          <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={pieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={120}
-                  paddingAngle={2}
+                  innerRadius={80}
+                  outerRadius={140}
+                  paddingAngle={3}
                   dataKey="value"
                   animationBegin={0}
-                  animationDuration={800}
+                  animationDuration={1000}
                 >
                   {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.color}
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                    />
                   ))}
                 </Pie>
                 <Tooltip content={<PieTooltip />} />
                 <Legend 
                   verticalAlign="bottom" 
-                  height={36}
+                  height={60}
                   formatter={(value, entry: any) => (
-                    <span style={{ color: entry.color }}>
+                    <span style={{ color: entry.color, fontWeight: 600 }}>
                       {value} ({entry.payload.percentage}%)
                     </span>
                   )}

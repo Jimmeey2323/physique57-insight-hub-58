@@ -30,7 +30,10 @@ const FunnelLeads = () => {
   const [filters, setFilters] = useState<LeadsFilterOptions>(() => {
     const previousMonth = getPreviousMonthDateRange();
     return {
-      dateRange: previousMonth,
+      dateRange: {
+        start: previousMonth.start,
+        end: previousMonth.end
+      },
       location: [],
       source: [],
       stage: [],
@@ -178,7 +181,7 @@ const FunnelLeads = () => {
                     <div className="flex items-center justify-center mb-3">
                       <Users className="w-8 h-8 text-blue-200" />
                     </div>
-                    <div className="text-2xl font-bold text-white">{filteredLeadsData.length}+</div>
+                    <div className="text-2xl font-bold text-white">{filteredLeadsData.length.toLocaleString('en-IN')}+</div>
                     <div className="text-sm text-blue-200">Total Leads</div>
                   </div>
                   <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
@@ -199,7 +202,7 @@ const FunnelLeads = () => {
                     </div>
                     <div className="text-2xl font-bold text-white">
                       ₹{filteredLeadsData.length > 0 
-                        ? Math.round(filteredLeadsData.reduce((sum, l) => sum + (l.ltv || 0), 0) / filteredLeadsData.length)
+                        ? Math.round(filteredLeadsData.reduce((sum, l) => sum + (l.ltv || 0), 0) / filteredLeadsData.length).toLocaleString('en-IN')
                         : 0
                       }
                     </div>
@@ -257,7 +260,7 @@ const FunnelLeads = () => {
           <FunnelInteractiveCharts data={filteredLeadsData} />
 
           {/* Rankings Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 gap-8">
             <FunnelSourceRankings data={filteredLeadsData} />
             <FunnelStageRankings data={filteredLeadsData} />
           </div>
@@ -269,7 +272,7 @@ const FunnelLeads = () => {
           <FunnelYearOnYearTable data={filteredLeadsData} />
 
           {/* Stage Performance and Health Tables */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 gap-8">
             <FunnelStagePerformanceTable data={filteredLeadsData} />
             <FunnelHealthMetricsTable data={filteredLeadsData} />
           </div>

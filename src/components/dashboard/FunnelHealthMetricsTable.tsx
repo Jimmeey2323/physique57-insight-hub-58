@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ModernDataTable } from '@/components/ui/ModernDataTable';
@@ -101,11 +100,11 @@ export const FunnelHealthMetricsTable: React.FC<FunnelHealthMetricsTableProps> =
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Excellent':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Excellent</Badge>;
+        return <Badge className="w-24 justify-center bg-green-600 text-white hover:bg-green-700 font-bold">Excellent</Badge>;
       case 'Good':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Good</Badge>;
+        return <Badge className="w-24 justify-center bg-yellow-500 text-white hover:bg-yellow-600 font-bold">Good</Badge>;
       default:
-        return <Badge variant="destructive">Needs Attention</Badge>;
+        return <Badge className="w-24 justify-center bg-red-600 text-white hover:bg-red-700 font-bold">Needs Fix</Badge>;
     }
   };
 
@@ -139,7 +138,7 @@ export const FunnelHealthMetricsTable: React.FC<FunnelHealthMetricsTableProps> =
             ? `${value}%` 
             : item.metric.includes('LTV') 
             ? formatCurrency(value)
-            : formatNumber(value)
+            : value.toLocaleString('en-IN')
           }
         </div>
       ),
@@ -179,8 +178,8 @@ export const FunnelHealthMetricsTable: React.FC<FunnelHealthMetricsTableProps> =
   }, [healthMetrics]);
 
   return (
-    <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-      <CardHeader>
+    <Card className="w-full bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+      <CardHeader className="bg-gradient-to-r from-red-50 to-pink-50 border-b">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-slate-800">
             <HeartHandshake className="w-6 h-6 text-red-600 animate-pulse" />
@@ -189,11 +188,12 @@ export const FunnelHealthMetricsTable: React.FC<FunnelHealthMetricsTableProps> =
           <div className="flex items-center gap-2">
             <span className="text-sm text-slate-600">Overall Health:</span>
             <Badge 
-              className={`text-lg px-3 py-1 ${
-                healthScore >= 85 ? 'bg-green-100 text-green-800' 
-                : healthScore >= 70 ? 'bg-yellow-100 text-yellow-800' 
-                : 'bg-red-100 text-red-800'
-              }`}
+              className={cn(
+                "text-lg px-4 py-2 font-black",
+                healthScore >= 85 ? "bg-green-600 text-white" 
+                : healthScore >= 70 ? "bg-yellow-500 text-white" 
+                : "bg-red-600 text-white"
+              )}
             >
               {healthScore}%
             </Badge>
@@ -201,13 +201,13 @@ export const FunnelHealthMetricsTable: React.FC<FunnelHealthMetricsTableProps> =
         </div>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="max-h-[500px] overflow-auto">
+        <div className="max-h-[600px] overflow-auto">
           <ModernDataTable
             data={healthMetrics}
             columns={columns}
             loading={false}
             stickyHeader={true}
-            maxHeight="400px"
+            maxHeight="500px"
             className="rounded-none"
           />
         </div>

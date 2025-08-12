@@ -1,11 +1,11 @@
-
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ModernDataTable } from '@/components/ui/ModernDataTable';
 import { Activity, CheckCircle, AlertTriangle } from 'lucide-react';
 import { LeadsData } from '@/types/leads';
-import { formatNumber, formatPercentage } from '@/utils/formatters';
+import { formatNumber, formatCurrency, formatPercentage } from '@/utils/formatters';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface FunnelStagePerformanceTableProps {
   data: LeadsData[];
@@ -89,7 +89,7 @@ export const FunnelStagePerformanceTable: React.FC<FunnelStagePerformanceTablePr
       header: '% of Total',
       render: (value: number) => (
         <div className="text-center">
-          <Badge variant="outline" className="text-slate-600">
+          <Badge variant="outline" className="w-16 justify-center text-slate-600 border-slate-300">
             {value.toFixed(1)}%
           </Badge>
         </div>
@@ -100,12 +100,17 @@ export const FunnelStagePerformanceTable: React.FC<FunnelStagePerformanceTablePr
       key: 'conversionRate',
       header: 'Conversion Rate',
       render: (value: number) => {
-        const color = value >= 70 ? 'green' : value >= 40 ? 'yellow' : 'red';
+        const isHigh = value >= 70;
+        const isMedium = value >= 40;
         return (
           <div className="text-center">
             <Badge 
-              variant={color === 'green' ? 'default' : 'destructive'}
-              className={color === 'yellow' ? 'bg-yellow-100 text-yellow-800' : ''}
+              className={cn(
+                "w-20 justify-center font-bold",
+                isHigh ? "bg-green-600 text-white hover:bg-green-700" 
+                      : isMedium ? "bg-yellow-500 text-white hover:bg-yellow-600" 
+                      : "bg-red-600 text-white hover:bg-red-700"
+              )}
             >
               {value.toFixed(1)}%
             </Badge>
@@ -119,7 +124,12 @@ export const FunnelStagePerformanceTable: React.FC<FunnelStagePerformanceTablePr
       header: 'Loss Rate',
       render: (value: number) => (
         <div className="text-center">
-          <Badge variant={value > 20 ? 'destructive' : 'outline'}>
+          <Badge 
+            className={cn(
+              "w-20 justify-center font-bold",
+              value > 20 ? "bg-red-600 text-white hover:bg-red-700" : "bg-slate-500 text-white hover:bg-slate-600"
+            )}
+          >
             {value.toFixed(1)}%
           </Badge>
         </div>
@@ -149,15 +159,15 @@ export const FunnelStagePerformanceTable: React.FC<FunnelStagePerformanceTablePr
   ];
 
   return (
-    <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
-      <CardHeader>
+    <Card className="w-full bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+      <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50 border-b">
         <CardTitle className="flex items-center gap-2 text-slate-800">
           <Activity className="w-6 h-6 text-purple-600 animate-pulse" />
           Stage Performance Breakdown
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="max-h-[500px] overflow-auto">
+        <div className="max-h-[600px] overflow-auto">
           <ModernDataTable
             data={stageData}
             columns={columns}
@@ -165,7 +175,7 @@ export const FunnelStagePerformanceTable: React.FC<FunnelStagePerformanceTablePr
             stickyHeader={true}
             showFooter={true}
             footerData={totals}
-            maxHeight="400px"
+            maxHeight="500px"
             className="rounded-none"
           />
         </div>
