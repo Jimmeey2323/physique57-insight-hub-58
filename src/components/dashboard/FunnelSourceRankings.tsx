@@ -13,7 +13,14 @@ interface FunnelSourceRankingsProps {
 
 export const FunnelSourceRankings: React.FC<FunnelSourceRankingsProps> = ({ data }) => {
   const sourceRankings = useMemo(() => {
-    if (!data.length) return { top: [], bottom: [] };
+    if (!data || !data.length) {
+      return { 
+        top: [], 
+        bottom: [], 
+        topLTV: [], 
+        topVolume: [] 
+      };
+    }
 
     const sourceStats = data.reduce((acc, lead) => {
       const source = lead.source || 'Unknown';
@@ -47,7 +54,7 @@ export const FunnelSourceRankings: React.FC<FunnelSourceRankingsProps> = ({ data
         avgVisits: source.totalLeads > 0 ? source.totalVisits / source.totalLeads : 0,
         trialCompletionRate: source.trialsScheduled > 0 ? (source.trialsCompleted / source.trialsScheduled) * 100 : 0
       }))
-      .filter(source => source.totalLeads >= 3); // Filter out sources with very few leads
+      .filter(source => source.totalLeads >= 3);
 
     const sortedByConversion = [...processedSources].sort((a, b) => b.conversionRate - a.conversionRate);
     const sortedByLTV = [...processedSources].sort((a, b) => b.avgLTV - a.avgLTV);
@@ -138,6 +145,25 @@ export const FunnelSourceRankings: React.FC<FunnelSourceRankingsProps> = ({ data
     );
   };
 
+  // Early return if no data
+  if (!data || !data.length) {
+    return (
+      <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-slate-800">
+            <Trophy className="w-6 h-6 text-yellow-600" />
+            Source Performance Rankings
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-slate-500">
+            No data available for source rankings
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
       <CardHeader>
@@ -154,14 +180,18 @@ export const FunnelSourceRankings: React.FC<FunnelSourceRankingsProps> = ({ data
             <h3 className="font-semibold text-slate-800">Top Conversion Sources</h3>
           </div>
           <div className="space-y-3">
-            {sourceRankings.top.map((source, index) => (
-              <RankingItem 
-                key={source.name} 
-                source={source} 
-                rank={index + 1} 
-                type="top" 
-              />
-            ))}
+            {sourceRankings.top && sourceRankings.top.length > 0 ? (
+              sourceRankings.top.map((source, index) => (
+                <RankingItem 
+                  key={source.name} 
+                  source={source} 
+                  rank={index + 1} 
+                  type="top" 
+                />
+              ))
+            ) : (
+              <div className="text-center py-4 text-slate-500">No conversion data available</div>
+            )}
           </div>
         </div>
 
@@ -172,14 +202,18 @@ export const FunnelSourceRankings: React.FC<FunnelSourceRankingsProps> = ({ data
             <h3 className="font-semibold text-slate-800">Highest LTV Sources</h3>
           </div>
           <div className="space-y-3">
-            {sourceRankings.topLTV.map((source, index) => (
-              <RankingItem 
-                key={`ltv-${source.name}`} 
-                source={source} 
-                rank={index + 1} 
-                type="ltv" 
-              />
-            ))}
+            {sourceRankings.topLTV && sourceRankings.topLTV.length > 0 ? (
+              sourceRankings.topLTV.map((source, index) => (
+                <RankingItem 
+                  key={`ltv-${source.name}`} 
+                  source={source} 
+                  rank={index + 1} 
+                  type="ltv" 
+                />
+              ))
+            ) : (
+              <div className="text-center py-4 text-slate-500">No LTV data available</div>
+            )}
           </div>
         </div>
 
@@ -190,14 +224,18 @@ export const FunnelSourceRankings: React.FC<FunnelSourceRankingsProps> = ({ data
             <h3 className="font-semibold text-slate-800">Needs Improvement</h3>
           </div>
           <div className="space-y-3">
-            {sourceRankings.bottom.map((source, index) => (
-              <RankingItem 
-                key={`bottom-${source.name}`} 
-                source={source} 
-                rank={index + 1} 
-                type="bottom" 
-              />
-            ))}
+            {sourceRankings.bottom && sourceRankings.bottom.length > 0 ? (
+              sourceRankings.bottom.map((source, index) => (
+                <RankingItem 
+                  key={`bottom-${source.name}`} 
+                  source={source} 
+                  rank={index + 1} 
+                  type="bottom" 
+                />
+              ))
+            ) : (
+              <div className="text-center py-4 text-slate-500">No underperforming sources identified</div>
+            )}
           </div>
         </div>
 
@@ -208,25 +246,25 @@ export const FunnelSourceRankings: React.FC<FunnelSourceRankingsProps> = ({ data
             <div>
               <span className="text-slate-600">Best Conversion Rate:</span>
               <div className="font-bold text-green-600">
-                {sourceRankings.top[0]?.conversionRate.toFixed(1) || '0'}%
+                {sourceRankings.top && sourceRankings.top[0]?.conversionRate.toFixed(1) || '0'}%
               </div>
             </div>
             <div>
               <span className="text-slate-600">Highest LTV Source:</span>
               <div className="font-bold text-blue-600">
-                {sourceRankings.topLTV[0]?.name || 'N/A'}
+                {sourceRankings.topLTV && sourceRankings.topLTV[0]?.name || 'N/A'}
               </div>
             </div>
             <div>
               <span className="text-slate-600">Total Sources:</span>
               <div className="font-bold text-slate-800">
-                {sourceRankings.top.length + sourceRankings.bottom.length}
+                {(sourceRankings.top?.length || 0) + (sourceRankings.bottom?.length || 0)}
               </div>
             </div>
             <div>
               <span className="text-slate-600">Avg Conversion:</span>
               <div className="font-bold text-slate-800">
-                {sourceRankings.top.length > 0 
+                {sourceRankings.top && sourceRankings.top.length > 0 
                   ? (sourceRankings.top.reduce((sum, s) => sum + s.conversionRate, 0) / sourceRankings.top.length).toFixed(1)
                   : '0'
                 }%

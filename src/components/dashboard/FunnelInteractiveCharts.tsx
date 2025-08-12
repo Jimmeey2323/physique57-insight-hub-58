@@ -3,10 +3,10 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Area, AreaChart } from 'recharts';
-import { BarChart3, TrendingUp, PieChart as PieChartIcon, Activity, Calendar, Users, Target } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
+import { TrendingUp, BarChart3, PieChart as PieChartIcon, Users, Target, Calendar, Filter } from 'lucide-react';
 import { LeadsData } from '@/types/leads';
-import { formatNumber, formatCurrency } from '@/utils/formatters';
+import { formatNumber, formatCurrency, formatPercentage } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 
 interface FunnelInteractiveChartsProps {
@@ -14,352 +14,347 @@ interface FunnelInteractiveChartsProps {
 }
 
 export const FunnelInteractiveCharts: React.FC<FunnelInteractiveChartsProps> = ({ data }) => {
-  const [chartType1, setChartType1] = useState<'bar' | 'line' | 'area'>('bar');
-  const [chartType2, setChartType2] = useState<'pie' | 'bar' | 'line'>('pie');
-  const [timeFrame, setTimeFrame] = useState<'monthly' | 'weekly' | 'daily'>('monthly');
+  const [chartType, setChartType] = useState<'source' | 'stage' | 'timeline'>('source');
+  const [metricType, setMetricType] = useState<'volume' | 'conversion' | 'ltv'>('volume');
 
-  // Process data for conversion funnel chart
-  const conversionFunnelData = useMemo(() => {
-    if (!data.length) return [];
+  const chartData = useMemo(() => {
+    if (!data || !data.length) return [];
 
-    const stages = [
-      { name: 'Leads Received', count: data.length },
-      { name: 'Trials Scheduled', count: data.filter(l => l.stage?.includes('Trial')).length },
-      { name: 'Trials Completed', count: data.filter(l => l.stage === 'Trial Completed').length },
-      { name: 'Converted', count: data.filter(l => l.conversionStatus === 'Converted').length }
-    ];
+    switch (chartType) {
+      case 'source': {
+        const sourceStats = data.reduce((acc, lead) => {
+          const source = lead.source || 'Unknown';
+          if (!acc[source]) {
+            acc[source] = { name: source, leads: 0, converted: 0, totalLTV: 0 };
+          }
+          acc[source].leads += 1;
+          if (lead.conversionStatus === 'Converted') acc[source].converted += 1;
+          acc[source].totalLTV += lead.ltv || 0;
+          return acc;
+        }, {} as Record<string, any>);
 
-    return stages.map((stage, index) => ({
-      ...stage,
-      conversionRate: index === 0 ? 100 : ((stage.count / stages[0].count) * 100).toFixed(1),
-      dropOff: index > 0 ? stages[index - 1].count - stage.count : 0
-    }));
-  }, [data]);
-
-  // Process data for source performance chart
-  const sourcePerformanceData = useMemo(() => {
-    if (!data.length) return [];
-
-    const sourceStats = data.reduce((acc, lead) => {
-      const source = lead.source || 'Unknown';
-      if (!acc[source]) {
-        acc[source] = {
-          name: source,
-          leads: 0,
-          converted: 0,
-          ltv: 0,
-          visits: 0
-        };
+        return Object.values(sourceStats)
+          .map((source: any) => ({
+            name: source.name,
+            volume: source.leads,
+            conversion: source.leads > 0 ? (source.converted / source.leads) * 100 : 0,
+            ltv: source.leads > 0 ? source.totalLTV / source.leads : 0
+          }))
+          .sort((a, b) => b.volume - a.volume)
+          .slice(0, 10);
       }
-      acc[source].leads += 1;
-      if (lead.conversionStatus === 'Converted') acc[source].converted += 1;
-      acc[source].ltv += lead.ltv || 0;
-      acc[source].visits += lead.visits || 0;
+
+      case 'stage': {
+        const stageStats = data.reduce((acc, lead) => {
+          const stage = lead.stage || 'Unknown';
+          if (!acc[stage]) {
+            acc[stage] = { name: stage, leads: 0, converted: 0, totalLTV: 0 };
+          }
+          acc[stage].leads += 1;
+          if (lead.conversionStatus === 'Converted') acc[stage].converted += 1;
+          acc[stage].totalLTV += lead.ltv || 0;
+          return acc;
+        }, {} as Record<string, any>);
+
+        return Object.values(stageStats)
+          .map((stage: any) => ({
+            name: stage.name,
+            volume: stage.leads,
+            conversion: stage.leads > 0 ? (stage.converted / stage.leads) * 100 : 0,
+            ltv: stage.leads > 0 ? stage.totalLTV / stage.leads : 0
+          }))
+          .sort((a, b) => b.volume - a.volume);
+      }
+
+      case 'timeline': {
+        const monthlyStats = data.reduce((acc, lead) => {
+          if (!lead.createdAt) return acc;
+          
+          const date = new Date(lead.createdAt);
+          if (isNaN(date.getTime())) return acc;
+          
+          const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          if (!acc[monthKey]) {
+            acc[monthKey] = { name: monthKey, leads: 0, converted: 0, totalLTV: 0 };
+          }
+          acc[monthKey].leads += 1;
+          if (lead.conversionStatus === 'Converted') acc[monthKey].converted += 1;
+          acc[monthKey].totalLTV += lead.ltv || 0;
+          return acc;
+        }, {} as Record<string, any>);
+
+        return Object.values(monthlyStats)
+          .map((month: any) => ({
+            name: month.name,
+            volume: month.leads,
+            conversion: month.leads > 0 ? (month.converted / month.leads) * 100 : 0,
+            ltv: month.leads > 0 ? month.totalLTV / month.leads : 0
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .slice(-12);
+      }
+
+      default:
+        return [];
+    }
+  }, [data, chartType]);
+
+  const pieData = useMemo(() => {
+    if (!data || !data.length) return [];
+
+    const conversionStats = data.reduce((acc, lead) => {
+      const status = lead.conversionStatus || 'Unknown';
+      acc[status] = (acc[status] || 0) + 1;
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, number>);
 
-    return Object.values(sourceStats)
-      .map((source: any) => ({
-        ...source,
-        conversionRate: source.leads > 0 ? ((source.converted / source.leads) * 100).toFixed(1) : '0',
-        avgLTV: source.leads > 0 ? Math.round(source.ltv / source.leads) : 0,
-        avgVisits: source.leads > 0 ? (source.visits / source.leads).toFixed(1) : '0'
-      }))
-      .sort((a, b) => b.leads - a.leads)
-      .slice(0, 10);
-  }, [data]);
-
-  // Process time-based data
-  const timeBasedData = useMemo(() => {
-    if (!data.length) return [];
-
-    const groupedData = data.reduce((acc, lead) => {
-      if (!lead.createdAt) return acc;
-      
-      const date = new Date(lead.createdAt);
-      let key = '';
-      
-      if (timeFrame === 'monthly') {
-        key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-      } else if (timeFrame === 'weekly') {
-        const week = Math.ceil(date.getDate() / 7);
-        key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-W${week}`;
-      } else {
-        key = date.toISOString().split('T')[0];
-      }
-      
-      if (!acc[key]) {
-        acc[key] = {
-          period: key,
-          leads: 0,
-          converted: 0,
-          ltv: 0,
-          trials: 0
-        };
-      }
-      
-      acc[key].leads += 1;
-      if (lead.conversionStatus === 'Converted') acc[key].converted += 1;
-      if (lead.stage === 'Trial Completed') acc[key].trials += 1;
-      acc[key].ltv += lead.ltv || 0;
-      
-      return acc;
-    }, {} as Record<string, any>);
-
-    return Object.values(groupedData)
-      .sort((a: any, b: any) => a.period.localeCompare(b.period))
-      .slice(-12); // Last 12 periods
-  }, [data, timeFrame]);
-
-  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
-
-  const renderChart1 = () => {
-    const ChartComponent = chartType1 === 'bar' ? BarChart : chartType1 === 'line' ? LineChart : AreaChart;
+    const colors = ['#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
     
-    return (
-      <ResponsiveContainer width="100%" height={350}>
-        <ChartComponent data={conversionFunnelData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-          <XAxis 
-            dataKey="name" 
-            stroke="#64748B"
-            fontSize={12}
-            angle={-45}
-            textAnchor="end"
-            height={80}
-          />
-          <YAxis stroke="#64748B" fontSize={12} />
-          <Tooltip 
-            contentStyle={{
-              backgroundColor: 'white',
-              border: '1px solid #E2E8F0',
-              borderRadius: '8px',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-            }}
-            formatter={(value: any, name: string) => [
-              name === 'count' ? formatNumber(value) : `${value}%`,
-              name === 'count' ? 'Count' : 'Conversion Rate'
-            ]}
-          />
-          {chartType1 === 'bar' && (
-            <>
-              <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="conversionRate" fill="#10B981" radius={[4, 4, 0, 0]} />
-            </>
-          )}
-          {chartType1 === 'line' && (
-            <>
-              <Line 
-                type="monotone" 
-                dataKey="count" 
-                stroke="#3B82F6" 
-                strokeWidth={3}
-                dot={{ fill: '#3B82F6', strokeWidth: 2, r: 6 }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="conversionRate" 
-                stroke="#10B981" 
-                strokeWidth={3}
-                dot={{ fill: '#10B981', strokeWidth: 2, r: 6 }}
-              />
-            </>
-          )}
-          {chartType1 === 'area' && (
-            <>
-              <Area 
-                type="monotone" 
-                dataKey="count" 
-                stroke="#3B82F6" 
-                fill="#3B82F6" 
-                fillOpacity={0.3}
-                strokeWidth={2}
-              />
-            </>
-          )}
-        </ChartComponent>
-      </ResponsiveContainer>
-    );
+    return Object.entries(conversionStats)
+      .map(([status, count], index) => ({
+        name: status,
+        value: count,
+        percentage: ((count / data.length) * 100).toFixed(1),
+        color: colors[index % colors.length]
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [data]);
+
+  const getChartTitle = () => {
+    const typeMap = {
+      source: 'Source Analysis',
+      stage: 'Stage Analysis', 
+      timeline: 'Timeline Analysis'
+    };
+    return typeMap[chartType];
   };
 
-  const renderChart2 = () => {
-    if (chartType2 === 'pie') {
+  const getMetricValue = (item: any) => {
+    switch (metricType) {
+      case 'volume': return item.volume;
+      case 'conversion': return item.conversion;
+      case 'ltv': return item.ltv;
+      default: return item.volume;
+    }
+  };
+
+  const getMetricLabel = () => {
+    switch (metricType) {
+      case 'volume': return 'Lead Volume';
+      case 'conversion': return 'Conversion Rate (%)';
+      case 'ltv': return 'Average LTV (₹)';
+      default: return 'Lead Volume';
+    }
+  };
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
       return (
-        <ResponsiveContainer width="100%" height={350}>
-          <PieChart>
-            <Pie
-              data={sourcePerformanceData.slice(0, 6)}
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={120}
-              paddingAngle={5}
-              dataKey="leads"
-              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-            >
-              {sourcePerformanceData.slice(0, 6).map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-              ))}
-            </Pie>
-            <Tooltip 
-              formatter={(value: any) => [formatNumber(value), 'Leads']}
-              contentStyle={{
-                backgroundColor: 'white',
-                border: '1px solid #E2E8F0',
-                borderRadius: '8px',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-              }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+        <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg">
+          <p className="font-semibold text-slate-800">{label}</p>
+          <p className="text-sm text-slate-600">
+            {getMetricLabel()}: {
+              metricType === 'ltv' 
+                ? formatCurrency(payload[0].value)
+                : metricType === 'conversion'
+                ? `${payload[0].value.toFixed(1)}%`
+                : formatNumber(payload[0].value)
+            }
+          </p>
+        </div>
       );
     }
-
-    const ChartComponent = chartType2 === 'bar' ? BarChart : LineChart;
-    
-    return (
-      <ResponsiveContainer width="100%" height={350}>
-        <ChartComponent data={sourcePerformanceData.slice(0, 8)}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-          <XAxis 
-            dataKey="name" 
-            stroke="#64748B"
-            fontSize={12}
-            angle={-45}
-            textAnchor="end"
-            height={80}
-          />
-          <YAxis stroke="#64748B" fontSize={12} />
-          <Tooltip 
-            contentStyle={{
-              backgroundColor: 'white',
-              border: '1px solid #E2E8F0',
-              borderRadius: '8px',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-            }}
-          />
-          {chartType2 === 'bar' && (
-            <>
-              <Bar dataKey="leads" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="converted" fill="#10B981" radius={[4, 4, 0, 0]} />
-            </>
-          )}
-          {chartType2 === 'line' && (
-            <>
-              <Line 
-                type="monotone" 
-                dataKey="leads" 
-                stroke="#3B82F6" 
-                strokeWidth={3}
-                dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="converted" 
-                stroke="#10B981" 
-                strokeWidth={3}
-                dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
-              />
-            </>
-          )}
-        </ChartComponent>
-      </ResponsiveContainer>
-    );
+    return null;
   };
 
+  const PieTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg">
+          <p className="font-semibold text-slate-800">{data.name}</p>
+          <p className="text-sm text-slate-600">
+            Count: {formatNumber(data.value)} ({data.percentage}%)
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  if (!data || !data.length) {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+          <CardContent className="p-6">
+            <div className="text-center py-8 text-slate-500">
+              No data available for charts
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+          <CardContent className="p-6">
+            <div className="text-center py-8 text-slate-500">
+              No data available for charts
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      {/* Conversion Funnel Chart */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Main Chart */}
       <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-slate-800">
               <BarChart3 className="w-6 h-6 text-blue-600 animate-pulse" />
-              Conversion Funnel Analysis
+              {getChartTitle()}
             </CardTitle>
             <div className="flex gap-2">
-              {['bar', 'line', 'area'].map((type) => (
-                <Button
-                  key={type}
-                  variant={chartType1 === type ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setChartType1(type as any)}
-                  className={cn(
-                    "transition-all duration-200",
-                    chartType1 === type && "bg-blue-600 text-white"
-                  )}
-                >
-                  {type === 'bar' && <BarChart3 className="w-4 h-4" />}
-                  {type === 'line' && <TrendingUp className="w-4 h-4" />}
-                  {type === 'area' && <Activity className="w-4 h-4" />}
-                </Button>
-              ))}
+              <Button
+                variant={chartType === 'source' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setChartType('source')}
+                className="text-xs"
+              >
+                <Users className="w-3 h-3 mr-1" />
+                Sources
+              </Button>
+              <Button
+                variant={chartType === 'stage' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setChartType('stage')}
+                className="text-xs"
+              >
+                <Target className="w-3 h-3 mr-1" />
+                Stages
+              </Button>
+              <Button
+                variant={chartType === 'timeline' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setChartType('timeline')}
+                className="text-xs"
+              >
+                <Calendar className="w-3 h-3 mr-1" />
+                Timeline
+              </Button>
             </div>
+          </div>
+          
+          <div className="flex gap-2 mt-2">
+            <Badge 
+              variant={metricType === 'volume' ? 'default' : 'outline'}
+              className="cursor-pointer"
+              onClick={() => setMetricType('volume')}
+            >
+              Volume
+            </Badge>
+            <Badge 
+              variant={metricType === 'conversion' ? 'default' : 'outline'}
+              className="cursor-pointer"
+              onClick={() => setMetricType('conversion')}
+            >
+              Conversion
+            </Badge>
+            <Badge 
+              variant={metricType === 'ltv' ? 'default' : 'outline'}
+              className="cursor-pointer"
+              onClick={() => setMetricType('ltv')}
+            >
+              LTV
+            </Badge>
           </div>
         </CardHeader>
         <CardContent>
-          {renderChart1()}
-          <div className="mt-4 p-4 bg-slate-50 rounded-lg">
-            <p className="text-sm text-slate-600 font-medium mb-2">Key Insights:</p>
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div>
-                <span className="font-semibold">Drop-off Rate:</span> {conversionFunnelData.length > 1 ? 
-                  `${(100 - parseFloat(conversionFunnelData[conversionFunnelData.length - 1].conversionRate)).toFixed(1)}%`
-                  : 'N/A'
-                }
-              </div>
-              <div>
-                <span className="font-semibold">Best Stage:</span> Trial Completion
-              </div>
-            </div>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              {chartType === 'timeline' ? (
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#64748b"
+                    fontSize={12}
+                    tickFormatter={(value) => String(value).slice(-5)}
+                  />
+                  <YAxis stroke="#64748b" fontSize={12} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Line 
+                    type="monotone" 
+                    dataKey={metricType} 
+                    stroke="#3b82f6" 
+                    strokeWidth={3}
+                    dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, fill: '#1d4ed8' }}
+                  />
+                </LineChart>
+              ) : (
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#64748b"
+                    fontSize={12}
+                    angle={-45}
+                    textAnchor="end"
+                    height={60}
+                  />
+                  <YAxis stroke="#64748b" fontSize={12} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar 
+                    dataKey={metricType} 
+                    fill="#3b82f6"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              )}
+            </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
 
-      {/* Source Performance Chart */}
+      {/* Pie Chart */}
       <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-slate-800">
-              <Target className="w-6 h-6 text-green-600 animate-pulse" />
-              Source Performance Analysis
-            </CardTitle>
-            <div className="flex gap-2">
-              {['pie', 'bar', 'line'].map((type) => (
-                <Button
-                  key={type}
-                  variant={chartType2 === type ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setChartType2(type as any)}
-                  className={cn(
-                    "transition-all duration-200",
-                    chartType2 === type && "bg-green-600 text-white"
-                  )}
-                >
-                  {type === 'pie' && <PieChartIcon className="w-4 h-4" />}
-                  {type === 'bar' && <BarChart3 className="w-4 h-4" />}
-                  {type === 'line' && <TrendingUp className="w-4 h-4" />}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <CardTitle className="flex items-center gap-2 text-slate-800">
+            <PieChartIcon className="w-6 h-6 text-purple-600 animate-pulse" />
+            Conversion Status Distribution
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          {renderChart2()}
-          <div className="mt-4 p-4 bg-slate-50 rounded-lg">
-            <p className="text-sm text-slate-600 font-medium mb-2">Performance Summary:</p>
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div>
-                <span className="font-semibold">Top Source:</span> {sourcePerformanceData[0]?.name || 'N/A'}
-              </div>
-              <div>
-                <span className="font-semibold">Best Conversion:</span> {
-                  sourcePerformanceData.length > 0 
-                    ? `${Math.max(...sourcePerformanceData.map(s => parseFloat(s.conversionRate))).toFixed(1)}%`
-                    : 'N/A'
-                }
-              </div>
-            </div>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={120}
+                  paddingAngle={2}
+                  dataKey="value"
+                  animationBegin={0}
+                  animationDuration={800}
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip content={<PieTooltip />} />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36}
+                  formatter={(value, entry: any) => (
+                    <span style={{ color: entry.color }}>
+                      {value} ({entry.payload.percentage}%)
+                    </span>
+                  )}
+                />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>

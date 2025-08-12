@@ -2,9 +2,22 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Target, Calendar, TrendingUp, TrendingDown, MapPin, DollarSign, Activity, CheckCircle, Clock, AlertTriangle, BarChart3 } from 'lucide-react';
+import { 
+  Users, 
+  Target, 
+  Calendar, 
+  MapPin, 
+  TrendingUp, 
+  DollarSign, 
+  Activity, 
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  Eye,
+  Zap
+} from 'lucide-react';
 import { LeadsData } from '@/types/leads';
-import { formatCurrency, formatNumber, formatPercentage } from '@/utils/formatters';
+import { formatNumber, formatCurrency, formatPercentage } from '@/utils/formatters';
 import { cn } from '@/lib/utils';
 
 interface FunnelMetricCardsProps {
@@ -13,247 +26,266 @@ interface FunnelMetricCardsProps {
 
 export const FunnelMetricCards: React.FC<FunnelMetricCardsProps> = ({ data }) => {
   const metrics = useMemo(() => {
-    if (!data.length) return [];
+    if (!data || !data.length) {
+      return {
+        leadsReceived: 0,
+        trialsCompleted: 0,
+        trialsScheduled: 0,
+        proximityIssues: 0,
+        convertedLeads: 0,
+        trialToMemberConversion: 0,
+        leadToTrialConversion: 0,
+        leadToMemberConversion: 0,
+        avgLTV: 0,
+        avgVisitsPerLead: 0,
+        pipelineHealth: 0
+      };
+    }
 
-    const totalLeads = data.length;
-    const trialsCompleted = data.filter(lead => lead.stage === 'Trial Completed' || lead.trialStatus === 'Completed').length;
-    const trialsScheduled = data.filter(lead => lead.stage?.includes('Trial') && lead.stage !== 'Trial Completed').length;
-    const proximityIssues = data.filter(lead => lead.stage === 'Proximity Issues' || lead.remarks?.toLowerCase().includes('proximity')).length;
-    const convertedLeads = data.filter(lead => lead.conversionStatus === 'Converted' || lead.status === 'Won').length;
+    const leadsReceived = data.length;
+    const trialsCompleted = data.filter(lead => lead.stage === 'Trial Completed').length;
+    const trialsScheduled = data.filter(lead => lead.stage?.includes('Trial')).length;
+    const proximityIssues = data.filter(lead => lead.stage?.includes('Proximity') || lead.remarks?.toLowerCase().includes('proximity')).length;
+    const convertedLeads = data.filter(lead => lead.conversionStatus === 'Converted').length;
+    
+    const trialToMemberConversion = trialsCompleted > 0 ? (convertedLeads / trialsCompleted) * 100 : 0;
+    const leadToTrialConversion = leadsReceived > 0 ? (trialsScheduled / leadsReceived) * 100 : 0;
+    const leadToMemberConversion = leadsReceived > 0 ? (convertedLeads / leadsReceived) * 100 : 0;
+    
     const totalLTV = data.reduce((sum, lead) => sum + (lead.ltv || 0), 0);
+    const avgLTV = leadsReceived > 0 ? totalLTV / leadsReceived : 0;
+    
     const totalVisits = data.reduce((sum, lead) => sum + (lead.visits || 0), 0);
+    const avgVisitsPerLead = leadsReceived > 0 ? totalVisits / leadsReceived : 0;
     
-    const trialToMemberRate = trialsCompleted > 0 ? (convertedLeads / trialsCompleted) * 100 : 0;
-    const leadToTrialRate = totalLeads > 0 ? (trialsCompleted / totalLeads) * 100 : 0;
-    const leadToMemberRate = totalLeads > 0 ? (convertedLeads / totalLeads) * 100 : 0;
-    const avgLTV = totalLeads > 0 ? totalLTV / totalLeads : 0;
-    const avgVisitsPerLead = totalLeads > 0 ? totalVisits / totalLeads : 0;
-    
-    // Pipeline health calculation
-    const activeLeads = data.filter(lead => !['Lost', 'Won', 'Inactive'].includes(lead.status || '')).length;
-    const pipelineHealth = totalLeads > 0 ? (activeLeads / totalLeads) * 100 : 0;
+    // Pipeline health score based on multiple factors
+    const pipelineHealth = Math.min(100, Math.round(
+      (leadToTrialConversion * 0.3) + 
+      (trialToMemberConversion * 0.4) + 
+      (avgVisitsPerLead * 10 * 0.2) + 
+      ((leadsReceived - proximityIssues) / leadsReceived * 100 * 0.1)
+    ));
 
-    return [
-      {
-        title: 'Leads Received',
-        value: formatNumber(totalLeads),
-        icon: Users,
-        color: 'blue',
-        description: 'Total leads generated in the selected period',
-        change: 12.5
-      },
-      {
-        title: 'Trials Completed',
-        value: formatNumber(trialsCompleted),
-        icon: CheckCircle,
-        color: 'green',
-        description: 'Leads who completed their trial sessions',
-        change: 8.3
-      },
-      {
-        title: 'Trials Scheduled',
-        value: formatNumber(trialsScheduled),
-        icon: Calendar,
-        color: 'orange',
-        description: 'Leads with scheduled trial sessions',
-        change: -2.1
-      },
-      {
-        title: 'Proximity Issues',
-        value: formatNumber(proximityIssues),
-        icon: MapPin,
-        color: 'red',
-        description: 'Leads facing location/proximity challenges',
-        change: -15.7
-      },
-      {
-        title: 'Converted Leads',
-        value: formatNumber(convertedLeads),
-        icon: Target,
-        color: 'emerald',
-        description: 'Leads successfully converted to members',
-        change: 18.2
-      },
-      {
-        title: 'Trial → Member Rate',
-        value: `${trialToMemberRate.toFixed(1)}%`,
-        icon: TrendingUp,
-        color: 'purple',
-        description: 'Conversion rate from trial to membership',
-        change: 5.4
-      },
-      {
-        title: 'Lead → Trial Rate',
-        value: `${leadToTrialRate.toFixed(1)}%`,
-        icon: Activity,
-        color: 'indigo',
-        description: 'Conversion rate from lead to trial',
-        change: 3.2
-      },
-      {
-        title: 'Lead → Member Rate',
-        value: `${leadToMemberRate.toFixed(1)}%`,
-        icon: BarChart3,
-        color: 'cyan',
-        description: 'Overall conversion rate from lead to member',
-        change: 7.8
-      },
-      {
-        title: 'Average LTV',
-        value: formatCurrency(avgLTV),
-        icon: DollarSign,
-        color: 'yellow',
-        description: 'Average lifetime value per lead',
-        change: 22.1
-      },
-      {
-        title: 'Avg Visits/Lead',
-        value: avgVisitsPerLead.toFixed(1),
-        icon: Clock,
-        color: 'pink',
-        description: 'Average number of visits per lead',
-        change: -1.3
-      },
-      {
-        title: 'Pipeline Health',
-        value: `${pipelineHealth.toFixed(1)}%`,
-        icon: AlertTriangle,
-        color: pipelineHealth > 70 ? 'green' : pipelineHealth > 50 ? 'yellow' : 'red',
-        description: 'Percentage of active leads in pipeline',
-        change: 4.6
-      }
-    ];
+    return {
+      leadsReceived,
+      trialsCompleted,
+      trialsScheduled,
+      proximityIssues,
+      convertedLeads,
+      trialToMemberConversion,
+      leadToTrialConversion,
+      leadToMemberConversion,
+      avgLTV,
+      avgVisitsPerLead,
+      pipelineHealth
+    };
   }, [data]);
 
-  const getColorClasses = (color: string) => {
-    const colors = {
-      blue: 'from-blue-500 to-blue-600 text-blue-100',
-      green: 'from-green-500 to-green-600 text-green-100',
-      orange: 'from-orange-500 to-orange-600 text-orange-100',
-      red: 'from-red-500 to-red-600 text-red-100',
-      emerald: 'from-emerald-500 to-emerald-600 text-emerald-100',
-      purple: 'from-purple-500 to-purple-600 text-purple-100',
-      indigo: 'from-indigo-500 to-indigo-600 text-indigo-100',
-      cyan: 'from-cyan-500 to-cyan-600 text-cyan-100',
-      yellow: 'from-yellow-500 to-yellow-600 text-yellow-100',
-      pink: 'from-pink-500 to-pink-600 text-pink-100'
+  const MetricCard = ({ 
+    title, 
+    value, 
+    icon: Icon, 
+    color, 
+    subtitle, 
+    trend,
+    format = 'number'
+  }: {
+    title: string;
+    value: number;
+    icon: React.ElementType;
+    color: string;
+    subtitle?: string;
+    trend?: number;
+    format?: 'number' | 'currency' | 'percentage';
+  }) => {
+    const formatValue = (val: number) => {
+      switch (format) {
+        case 'currency': return formatCurrency(val);
+        case 'percentage': return `${val.toFixed(1)}%`;
+        default: return formatNumber(val);
+      }
     };
-    return colors[color as keyof typeof colors] || colors.blue;
-  };
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {metrics.map((metric, index) => {
-        const Icon = metric.icon;
-        const isPositive = metric.change > 0;
+    const getTrendColor = () => {
+      if (trend === undefined) return '';
+      return trend > 0 ? 'text-green-600' : trend < 0 ? 'text-red-600' : 'text-slate-600';
+    };
+
+    return (
+      <Card className={cn(
+        "group relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105",
+        "bg-gradient-to-br from-white to-slate-50 border-0 shadow-lg"
+      )}>
+        <div className={cn(
+          "absolute inset-0 bg-gradient-to-br opacity-5 transition-opacity duration-300 group-hover:opacity-10",
+          color
+        )} />
         
-        return (
-          <Card 
-            key={metric.title}
-            className={cn(
-              "group relative overflow-hidden transition-all duration-700 hover:shadow-2xl hover:scale-105 cursor-pointer",
-              "bg-gradient-to-br from-white to-slate-50 border-0 shadow-lg",
-              "animate-fade-in"
-            )}
-            style={{ animationDelay: `${index * 100}ms` }}
-          >
-            {/* Gradient overlay */}
-            <div className={cn(
-              "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 transition-opacity duration-500",
-              getColorClasses(metric.color)
-            )} />
-            
-            {/* Top border animation */}
-            <div className={cn(
-              "absolute top-0 left-0 w-full h-1 bg-gradient-to-r transform scale-x-0 group-hover:scale-x-100 transition-transform duration-700 origin-left",
-              getColorClasses(metric.color)
-            )} />
-            
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <p className="text-sm font-semibold text-slate-600 mb-2 tracking-wide uppercase">
-                    {metric.title}
-                  </p>
-                  <div className="flex items-end gap-2 mb-3">
-                    <span className="text-3xl font-bold text-slate-900 group-hover:text-slate-800 transition-colors">
-                      {metric.value}
-                    </span>
-                    <Badge 
-                      variant={isPositive ? "default" : "destructive"}
-                      className={cn(
-                        "text-xs font-bold px-2 py-1 transition-all duration-300",
-                        isPositive ? "bg-green-100 text-green-700 border-green-200" : "bg-red-100 text-red-700 border-red-200"
-                      )}
-                    >
-                      {isPositive ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
-                      {formatPercentage(metric.change)}
-                    </Badge>
-                  </div>
-                </div>
-                
+        <CardContent className="p-6 relative">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-3">
                 <div className={cn(
-                  "p-3 rounded-full bg-gradient-to-r transition-all duration-300 group-hover:scale-110",
-                  getColorClasses(metric.color)
+                  "p-3 rounded-xl transition-all duration-300 group-hover:scale-110",
+                  color.replace('from-', 'bg-').replace('-400', '-100').split(' ')[0],
+                  color.replace('to-', 'text-').replace('-600', '-600').split(' ')[1]
                 )}>
                   <Icon className="w-6 h-6" />
                 </div>
-              </div>
-              
-              {/* Progress indicator */}
-              <div className="relative w-full bg-slate-200 rounded-full h-1.5 mb-3 overflow-hidden">
-                <div 
-                  className={cn(
-                    "h-full bg-gradient-to-r rounded-full transition-all duration-1000 ease-out",
-                    getColorClasses(metric.color)
+                <div>
+                  <h3 className="text-sm font-medium text-slate-600 leading-tight">{title}</h3>
+                  {subtitle && (
+                    <p className="text-xs text-slate-500 mt-1">{subtitle}</p>
                   )}
-                  style={{ 
-                    width: `${Math.min(Math.abs(metric.change) * 5, 100)}%`,
-                    transform: 'translateX(-100%)',
-                    animation: 'slideIn 1.5s ease-out forwards'
-                  }}
-                />
+                </div>
               </div>
               
-              {/* Description on hover */}
-              <div className="overflow-hidden transition-all duration-300 group-hover:max-h-20 max-h-0">
-                <p className="text-xs text-slate-600 leading-relaxed pt-2 border-t border-slate-100">
-                  {metric.description}
-                </p>
+              <div className="space-y-2">
+                <div className={cn(
+                  "text-3xl font-bold transition-all duration-300 group-hover:scale-105",
+                  color.replace('to-', 'text-').replace('-600', '-700').split(' ')[1]
+                )}>
+                  {formatValue(value)}
+                </div>
+                
+                {trend !== undefined && (
+                  <div className="flex items-center gap-1">
+                    <TrendingUp className={cn("w-3 h-3", getTrendColor())} />
+                    <span className={cn("text-xs font-medium", getTrendColor())}>
+                      {trend > 0 ? '+' : ''}{trend.toFixed(1)}%
+                    </span>
+                    <span className="text-xs text-slate-500">vs last period</span>
+                  </div>
+                )}
               </div>
-              
-              {/* Click indicator */}
-              <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping" />
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
-      
-      <style jsx>{`
-        @keyframes slideIn {
-          from {
-            transform: translateX(-100%);
+            </div>
+          </div>
+          
+          {/* Animated background element */}
+          <div className={cn(
+            "absolute -top-4 -right-4 w-24 h-24 rounded-full opacity-5 transition-all duration-500 group-hover:scale-125",
+            color.replace('from-', 'bg-').replace('-400', '-200').split(' ')[0]
+          )} />
+        </CardContent>
+      </Card>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard
+          title="Leads Received"
+          value={metrics.leadsReceived}
+          icon={Users}
+          color="from-blue-400 to-blue-600"
+          subtitle="Total incoming leads"
+        />
+        
+        <MetricCard
+          title="Trials Completed"
+          value={metrics.trialsCompleted}
+          icon={CheckCircle}
+          color="from-green-400 to-green-600"
+          subtitle="Successful trial sessions"
+        />
+        
+        <MetricCard
+          title="Trials Scheduled"
+          value={metrics.trialsScheduled}
+          icon={Calendar}
+          color="from-purple-400 to-purple-600"
+          subtitle="Scheduled trial sessions"
+        />
+        
+        <MetricCard
+          title="Proximity Issues"
+          value={metrics.proximityIssues}
+          icon={MapPin}
+          color="from-red-400 to-red-600"
+          subtitle="Location-related concerns"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard
+          title="Converted Leads"
+          value={metrics.convertedLeads}
+          icon={Target}
+          color="from-emerald-400 to-emerald-600"
+          subtitle="Successfully converted"
+        />
+        
+        <MetricCard
+          title="Trial → Member Rate"
+          value={metrics.trialToMemberConversion}
+          icon={TrendingUp}
+          color="from-cyan-400 to-cyan-600"
+          subtitle="Trial conversion efficiency"
+          format="percentage"
+        />
+        
+        <MetricCard
+          title="Lead → Trial Rate"
+          value={metrics.leadToTrialConversion}
+          icon={Activity}
+          color="from-indigo-400 to-indigo-600"
+          subtitle="Lead engagement rate"
+          format="percentage"
+        />
+        
+        <MetricCard
+          title="Lead → Member Rate"
+          value={metrics.leadToMemberConversion}
+          icon={Zap}
+          color="from-yellow-400 to-yellow-600"
+          subtitle="Overall conversion rate"
+          format="percentage"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <MetricCard
+          title="Average LTV"
+          value={metrics.avgLTV}
+          icon={DollarSign}
+          color="from-green-400 to-green-600"
+          subtitle="Lifetime value per lead"
+          format="currency"
+        />
+        
+        <MetricCard
+          title="Avg Visits/Lead"
+          value={metrics.avgVisitsPerLead}
+          icon={Eye}
+          color="from-orange-400 to-orange-600"
+          subtitle="Engagement frequency"
+        />
+        
+        <MetricCard
+          title="Pipeline Health"
+          value={metrics.pipelineHealth}
+          icon={metrics.pipelineHealth >= 70 ? CheckCircle : metrics.pipelineHealth >= 50 ? Clock : AlertTriangle}
+          color={
+            metrics.pipelineHealth >= 70 
+              ? "from-green-400 to-green-600"
+              : metrics.pipelineHealth >= 50 
+              ? "from-yellow-400 to-yellow-600"
+              : "from-red-400 to-red-600"
           }
-          to {
-            transform: translateX(0);
-          }
+          subtitle="Overall funnel performance"
+          format="percentage"
+        />
+      </div>
+
+      <style>{`
+        @keyframes metric-pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
         }
         
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        
-        .animate-fade-in {
-          animation: fade-in 0.6s ease-out forwards;
+        .group:hover .animate-metric-pulse {
+          animation: metric-pulse 2s infinite;
         }
       `}</style>
     </div>
