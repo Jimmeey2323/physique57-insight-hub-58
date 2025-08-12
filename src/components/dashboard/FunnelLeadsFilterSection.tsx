@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,7 @@ import {
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { LeadsFilterOptions } from '@/types/leads';
+import { getPreviousMonthDateRange } from '@/utils/dateUtils';
 
 interface FunnelLeadsFilterSectionProps {
   filters: LeadsFilterOptions;
@@ -49,6 +50,17 @@ export const FunnelLeadsFilterSection: React.FC<FunnelLeadsFilterSectionProps> =
   className = ""
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+
+  // Set default to previous month on component mount
+  useEffect(() => {
+    const previousMonth = getPreviousMonthDateRange();
+    if (!filters.dateRange.start && !filters.dateRange.end) {
+      onFiltersChange({
+        ...filters,
+        dateRange: previousMonth
+      });
+    }
+  }, []);
 
   const handleFilterChange = (key: keyof LeadsFilterOptions, value: any) => {
     onFiltersChange({
@@ -80,8 +92,9 @@ export const FunnelLeadsFilterSection: React.FC<FunnelLeadsFilterSectionProps> =
   };
 
   const clearAllFilters = () => {
+    const previousMonth = getPreviousMonthDateRange();
     onFiltersChange({
-      dateRange: { start: '', end: '' },
+      dateRange: previousMonth,
       location: [],
       source: [],
       stage: [],
@@ -98,7 +111,8 @@ export const FunnelLeadsFilterSection: React.FC<FunnelLeadsFilterSectionProps> =
 
   const getActiveFiltersCount = () => {
     let count = 0;
-    if (filters.dateRange.start || filters.dateRange.end) count++;
+    const previousMonth = getPreviousMonthDateRange();
+    if (filters.dateRange.start !== previousMonth.start || filters.dateRange.end !== previousMonth.end) count++;
     if (filters.location.length > 0) count++;
     if (filters.source.length > 0) count++;
     if (filters.stage.length > 0) count++;
@@ -312,6 +326,26 @@ export const FunnelLeadsFilterSection: React.FC<FunnelLeadsFilterSectionProps> =
                 </div>
               </div>
 
+              {/* Status */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-slate-700">
+                  Status ({filters.status.length})
+                </Label>
+                <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
+                  {uniqueValues.statuses.map(status => (
+                    <label key={status} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 p-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={filters.status.includes(status)}
+                        onChange={(e) => handleArrayFilterChange('status', status, e.target.checked)}
+                        className="rounded"
+                      />
+                      <span className="text-slate-700">{status}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               {/* Conversion Status */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-slate-700">
@@ -351,6 +385,46 @@ export const FunnelLeadsFilterSection: React.FC<FunnelLeadsFilterSectionProps> =
                   ))}
                 </div>
               </div>
+
+              {/* Channel */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-slate-700">
+                  Channel ({filters.channel.length})
+                </Label>
+                <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
+                  {uniqueValues.channels.map(channel => (
+                    <label key={channel} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 p-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={filters.channel.includes(channel)}
+                        onChange={(e) => handleArrayFilterChange('channel', channel, e.target.checked)}
+                        className="rounded"
+                      />
+                      <span className="text-slate-700">{channel}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Retention Status */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-slate-700">
+                  Retention Status ({filters.retentionStatus.length})
+                </Label>
+                <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
+                  {uniqueValues.retentionStatuses.map(status => (
+                    <label key={status} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 p-1 rounded">
+                      <input
+                        type="checkbox"
+                        checked={filters.retentionStatus.includes(status)}
+                        onChange={(e) => handleArrayFilterChange('retentionStatus', status, e.target.checked)}
+                        className="rounded"
+                      />
+                      <span className="text-slate-700">{status}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* LTV Range */}
@@ -378,7 +452,7 @@ export const FunnelLeadsFilterSection: React.FC<FunnelLeadsFilterSectionProps> =
             {/* Apply/Reset Actions */}
             <div className="flex items-center justify-between pt-4 border-t">
               <div className="text-sm text-slate-600">
-                {activeFiltersCount > 0 ? `${activeFiltersCount} filter(s) applied` : 'No filters applied'}
+                {activeFiltersCount > 0 ? `${activeFiltersCount} filter(s) applied` : 'Default: Previous month data'}
               </div>
               <div className="flex gap-2">
                 <Button 
@@ -386,10 +460,9 @@ export const FunnelLeadsFilterSection: React.FC<FunnelLeadsFilterSectionProps> =
                   size="sm" 
                   onClick={clearAllFilters}
                   className="gap-2"
-                  disabled={activeFiltersCount === 0}
                 >
                   <RefreshCw className="w-3 h-3" />
-                  Reset
+                  Reset to Previous Month
                 </Button>
               </div>
             </div>

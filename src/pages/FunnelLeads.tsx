@@ -1,7 +1,9 @@
+
 import React, { useState, useMemo } from 'react';
 import { ImprovedLeadsSection } from '@/components/dashboard/ImprovedLeadsSection';
 import { FunnelLeadsFilterSection } from '@/components/dashboard/FunnelLeadsFilterSection';
 import { ImprovedLeadYearOnYearTable } from '@/components/dashboard/ImprovedLeadYearOnYearTable';
+import { LeadMonthOnMonthAnalytics } from '@/components/dashboard/LeadMonthOnMonthAnalytics';
 import { useNavigate } from 'react-router-dom';
 import { useLeadsData } from '@/hooks/useLeadsData';
 import { Button } from '@/components/ui/button';
@@ -12,24 +14,28 @@ import { Footer } from '@/components/ui/footer';
 import { cn } from '@/lib/utils';
 import { LeadsFilterOptions, LeadsData } from '@/types/leads';
 import { GlobalFiltersProvider } from '@/contexts/GlobalFiltersContext';
+import { getPreviousMonthDateRange } from '@/utils/dateUtils';
 
 const FunnelLeads = () => {
   const navigate = useNavigate();
   const { data: leadsData, loading, error } = useLeadsData();
 
-  const [filters, setFilters] = useState<LeadsFilterOptions>({
-    dateRange: { start: '', end: '' },
-    location: [],
-    source: [],
-    stage: [],
-    status: [],
-    associate: [],
-    channel: [],
-    trialStatus: [],
-    conversionStatus: [],
-    retentionStatus: [],
-    minLTV: undefined,
-    maxLTV: undefined
+  const [filters, setFilters] = useState<LeadsFilterOptions>(() => {
+    const previousMonth = getPreviousMonthDateRange();
+    return {
+      dateRange: previousMonth,
+      location: [],
+      source: [],
+      stage: [],
+      status: [],
+      associate: [],
+      channel: [],
+      trialStatus: [],
+      conversionStatus: [],
+      retentionStatus: [],
+      minLTV: undefined,
+      maxLTV: undefined
+    };
   });
 
   // Extract unique values for filters
@@ -131,7 +137,7 @@ const FunnelLeads = () => {
         processedData[source][monthYear].convertedLeads += 1;
       }
 
-      if (lead.trialStatus === 'Completed') {
+      if (lead.stage === 'Trial Completed') {
         processedData[source][monthYear].trialsCompleted += 1;
       }
 
@@ -268,6 +274,14 @@ const FunnelLeads = () => {
             filters={filters}
             onFiltersChange={setFilters}
             uniqueValues={uniqueValues}
+          />
+        </div>
+
+        {/* Month-on-Month Analytics */}
+        <div className="container mx-auto px-6 pb-8">
+          <LeadMonthOnMonthAnalytics
+            data={filteredLeadsData}
+            filters={filters}
           />
         </div>
 
