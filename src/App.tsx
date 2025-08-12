@@ -1,46 +1,28 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import ExecutiveSummary from "./pages/ExecutiveSummary";
-import SalesAnalytics from "./pages/SalesAnalytics";
-import FunnelLeads from "./pages/FunnelLeads";
-import ClientRetention from "./pages/ClientRetention";
-import TrainerPerformance from "./pages/TrainerPerformance";
-import ClassAttendance from "./pages/ClassAttendance";
-import DiscountsPromotions from "./pages/DiscountsPromotions";
-import Sessions from "./pages/Sessions";
-import PowerCycleVsBarre from "./pages/PowerCycleVsBarre";
-import NotFound from "./pages/NotFound";
+import { Toaster } from "@/components/ui/sonner"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { navItems } from "./nav-items"
+import { GlobalFiltersProvider } from "@/contexts/GlobalFiltersContext"
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient()
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/executive-summary" element={<ExecutiveSummary />} />
-          <Route path="/sales-analytics" element={<SalesAnalytics />} />
-          <Route path="/funnel-leads" element={<FunnelLeads />} />
-          <Route path="/client-retention" element={<ClientRetention />} />
-          <Route path="/trainer-performance" element={<TrainerPerformance />} />
-          <Route path="/class-attendance" element={<ClassAttendance />} />
-          <Route path="/discounts-promotions" element={<DiscountsPromotions />} />
-          <Route path="/sessions" element={<Sessions />} />
-          <Route path="/powercycle-vs-barre" element={<PowerCycleVsBarre />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <GlobalFiltersProvider>
+      <TooltipProvider>
+        <Toaster />
+        <BrowserRouter>
+          <Routes>
+            {navItems.map(({ to, page }) => (
+              <Route key={to} path={to} element={page} />
+            ))}
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </GlobalFiltersProvider>
   </QueryClientProvider>
-);
+)
 
-export default App;
+export default App
