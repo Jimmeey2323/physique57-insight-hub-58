@@ -45,56 +45,59 @@ interface GlobalFiltersProviderProps {
   children: ReactNode;
 }
 
-const getDefaultFilters = (): GlobalFilters => {
-  const previousMonth = getPreviousMonthDateRange();
-  return {
-    dateRange: previousMonth,
-    location: [],
-    category: [],
-    product: [],
-    soldBy: [],
-    paymentMethod: [],
-    source: [],
-    associate: [],
-    stage: [],
-    status: [],
-    channel: [],
-    trialStatus: [],
-    conversionStatus: [],
-    retentionStatus: [],
-    minLTV: undefined,
-    maxLTV: undefined
-  };
-};
-
 export const GlobalFiltersProvider: React.FC<GlobalFiltersProviderProps> = ({ children }) => {
-  const [filters, setFilters] = useState<GlobalFilters>(getDefaultFilters);
+  const [filters, setFilters] = useState<GlobalFilters>(() => {
+    const previousMonth = getPreviousMonthDateRange();
+    return {
+      dateRange: previousMonth,
+      location: [],
+      category: [],
+      product: [],
+      soldBy: [],
+      paymentMethod: [],
+      source: [],
+      associate: [],
+      stage: [],
+      status: [],
+      channel: [],
+      trialStatus: [],
+      conversionStatus: [],
+      retentionStatus: [],
+      minLTV: undefined,
+      maxLTV: undefined
+    };
+  });
 
   const updateFilters = (newFilters: Partial<GlobalFilters>) => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   };
 
   const clearFilters = () => {
-    setFilters(getDefaultFilters());
+    const previousMonth = getPreviousMonthDateRange();
+    setFilters({
+      dateRange: previousMonth,
+      location: [],
+      category: [],
+      product: [],
+      soldBy: [],
+      paymentMethod: [],
+      source: [],
+      associate: [],
+      stage: [],
+      status: [],
+      channel: [],
+      trialStatus: [],
+      conversionStatus: [],
+      retentionStatus: [],
+      minLTV: undefined,
+      maxLTV: undefined
+    });
   };
 
   const resetToDefaultDates = () => {
     const previousMonth = getPreviousMonthDateRange();
     updateFilters({ dateRange: previousMonth });
   };
-
-  // Reset filters to previous month on mount and when month changes
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      const currentDefault = getDefaultFilters();
-      if (filters.dateRange.start !== currentDefault.dateRange.start || 
-          filters.dateRange.end !== currentDefault.dateRange.end) {
-        resetToDefaultDates();
-      }
-    }, 24 * 60 * 60 * 1000); // Check daily
-
-    return () => clearInterval(intervalId);
-  }, [filters.dateRange]);
 
   return (
     <GlobalFiltersContext.Provider value={{
