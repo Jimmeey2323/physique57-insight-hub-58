@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +30,7 @@ import {
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { getPreviousMonthDateRange } from '@/utils/dateUtils';
 
 interface SessionsFilterSectionProps {
   filters: {
@@ -125,12 +125,16 @@ export const SessionsFilterSection: React.FC<SessionsFilterSectionProps> = ({
   };
 
   const clearAllFilters = () => {
+    const previousMonth = getPreviousMonthDateRange();
     setFilters({
       trainers: [],
       classTypes: [],
       dayOfWeek: [],
       timeSlots: [],
-      dateRange: { start: null, end: null }
+      dateRange: { 
+        start: new Date(previousMonth.start), 
+        end: new Date(previousMonth.end) 
+      }
     });
   };
 

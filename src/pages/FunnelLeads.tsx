@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { ImprovedLeadsSection } from '@/components/dashboard/ImprovedLeadsSection';
 import { FunnelLeadsFilterSection } from '@/components/dashboard/FunnelLeadsFilterSection';

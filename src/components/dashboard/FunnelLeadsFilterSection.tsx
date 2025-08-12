@@ -1,26 +1,42 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
+  CalendarIcon, 
   Filter, 
-  ChevronDown, 
-  ChevronUp, 
   X, 
-  Calendar as CalendarIcon, 
-  MapPin, 
-  Target, 
+  ChevronDown, 
+  Search,
+  MapPin,
+  Globe,
   Users,
+  Activity,
+  Briefcase,
+  CreditCard,
+  UserCheck,
   TrendingUp,
-  RefreshCw
+  CheckCircle,
+  Clock,
+  DollarSign
 } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { LeadsFilterOptions } from '@/types/leads';
@@ -40,54 +56,127 @@ interface FunnelLeadsFilterSectionProps {
     conversionStatuses: string[];
     retentionStatuses: string[];
   };
-  className?: string;
 }
 
 export const FunnelLeadsFilterSection: React.FC<FunnelLeadsFilterSectionProps> = ({
   filters,
   onFiltersChange,
-  uniqueValues,
-  className = ""
+  uniqueValues
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [openPopover, setOpenPopover] = useState<string | null>(null);
 
-  // Set default to previous month on component mount
-  useEffect(() => {
-    const previousMonth = getPreviousMonthDateRange();
-    if (!filters.dateRange.start && !filters.dateRange.end) {
-      onFiltersChange({
-        ...filters,
-        dateRange: previousMonth
-      });
+  const filterConfigs = [
+    {
+      key: 'location',
+      label: 'Location',
+      icon: MapPin,
+      options: uniqueValues.locations,
+      values: filters.location,
+      description: 'Filter by lead location'
+    },
+    {
+      key: 'source',
+      label: 'Source',
+      icon: Globe,
+      options: uniqueValues.sources,
+      values: filters.source,
+      description: 'Filter by lead source'
+    },
+    {
+      key: 'stage',
+      label: 'Stage',
+      icon: Activity,
+      options: uniqueValues.stages,
+      values: filters.stage,
+      description: 'Filter by lead stage'
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      icon: UserCheck,
+      options: uniqueValues.statuses,
+      values: filters.status,
+      description: 'Filter by lead status'
+    },
+    {
+      key: 'associate',
+      label: 'Associate',
+      icon: Users,
+      options: uniqueValues.associates,
+      values: filters.associate,
+      description: 'Filter by associate'
+    },
+    {
+      key: 'channel',
+      label: 'Channel',
+      icon: Briefcase,
+      options: uniqueValues.channels,
+      values: filters.channel,
+      description: 'Filter by channel'
+    },
+    {
+      key: 'trialStatus',
+      label: 'Trial Status',
+      icon: Clock,
+      options: uniqueValues.trialStatuses,
+      values: filters.trialStatus,
+      description: 'Filter by trial status'
+    },
+    {
+      key: 'conversionStatus',
+      label: 'Conversion Status',
+      icon: CheckCircle,
+      options: uniqueValues.conversionStatuses,
+      values: filters.conversionStatus,
+      description: 'Filter by conversion status'
+    },
+    {
+      key: 'retentionStatus',
+      label: 'Retention Status',
+      icon: TrendingUp,
+      options: uniqueValues.retentionStatuses,
+      values: filters.retentionStatus,
+      description: 'Filter by retention status'
     }
-  }, []);
+  ];
 
-  const handleFilterChange = (key: keyof LeadsFilterOptions, value: any) => {
-    onFiltersChange({
-      ...filters,
-      [key]: value
-    });
-  };
-
-  const handleArrayFilterChange = (key: keyof LeadsFilterOptions, value: string, checked: boolean) => {
-    const currentArray = filters[key] as string[];
-    const newArray = checked 
-      ? [...currentArray, value]
-      : currentArray.filter(item => item !== value);
+  const handleFilterChange = (filterKey: string, value: string) => {
+    const currentValues = [...(filters[filterKey as keyof LeadsFilterOptions] as string[])];
+    const index = currentValues.indexOf(value);
     
-    onFiltersChange({
-      ...filters,
-      [key]: newArray
+    if (index > -1) {
+      currentValues.splice(index, 1);
+    } else {
+      currentValues.push(value);
+    }
+    
+    onFiltersChange({ 
+      ...filters, 
+      [filterKey]: currentValues 
     });
   };
 
-  const handleDateChange = (type: 'start' | 'end', date: Date | undefined) => {
+  const handleDateRangeChange = (type: 'start' | 'end', date: Date | null) => {
     onFiltersChange({
       ...filters,
       dateRange: {
         ...filters.dateRange,
-        [type]: date ? date.toISOString().split('T')[0] : ''
+        [type]: date ? date.toISOString().split('T')[0] : null
       }
+    });
+  };
+
+  const handleLTVChange = (type: 'minLTV' | 'maxLTV', value: number | undefined) => {
+    onFiltersChange({
+      ...filters,
+      [type]: value
+    });
+  };
+
+  const clearFilter = (filterKey: string) => {
+    onFiltersChange({
+      ...filters,
+      [filterKey]: []
     });
   };
 
@@ -109,366 +198,286 @@ export const FunnelLeadsFilterSection: React.FC<FunnelLeadsFilterSectionProps> =
     });
   };
 
-  const getActiveFiltersCount = () => {
-    let count = 0;
-    const previousMonth = getPreviousMonthDateRange();
-    if (filters.dateRange.start !== previousMonth.start || filters.dateRange.end !== previousMonth.end) count++;
-    if (filters.location.length > 0) count++;
-    if (filters.source.length > 0) count++;
-    if (filters.stage.length > 0) count++;
-    if (filters.status.length > 0) count++;
-    if (filters.associate.length > 0) count++;
-    if (filters.channel.length > 0) count++;
-    if (filters.trialStatus.length > 0) count++;
-    if (filters.conversionStatus.length > 0) count++;
-    if (filters.retentionStatus.length > 0) count++;
-    if (filters.minLTV !== undefined || filters.maxLTV !== undefined) count++;
-    return count;
-  };
+  const activeFilterCount = filterConfigs.reduce((count, config) => {
+    return count + config.values.length;
+  }, 0) + (filters.dateRange.start ? 1 : 0) + (filters.dateRange.end ? 1 : 0) + (filters.minLTV !== undefined ? 1 : 0) + (filters.maxLTV !== undefined ? 1 : 0);
 
-  const activeFiltersCount = getActiveFiltersCount();
+  const MultiSelectFilter = ({ config }: { config: typeof filterConfigs[0] }) => (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <config.icon className="w-4 h-4 text-gray-600" />
+          <label className="font-medium text-sm text-gray-700">{config.label}</label>
+          {config.values.length > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {config.values.length}
+            </Badge>
+          )}
+        </div>
+        {config.values.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => clearFilter(config.key)}
+            className="h-6 px-2 text-xs text-gray-500 hover:text-gray-700"
+          >
+            Clear
+          </Button>
+        )}
+      </div>
+      
+      <Popover 
+        open={openPopover === config.key} 
+        onOpenChange={(open) => setOpenPopover(open ? config.key : null)}
+      >
+        <PopoverTrigger asChild>
+          <Button 
+            variant="outline" 
+            className="w-full justify-between text-left font-normal"
+            size="sm"
+          >
+            <span className="truncate">
+              {config.values.length > 0 
+                ? `${config.values.length} selected`
+                : `Select ${config.label.toLowerCase()}`
+              }
+            </span>
+            <ChevronDown className="h-4 w-4 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-0" align="start">
+          <Command>
+            <CommandInput placeholder={`Search ${config.label.toLowerCase()}...`} />
+            <CommandList>
+              <CommandEmpty>No {config.label.toLowerCase()} found.</CommandEmpty>
+              <CommandGroup>
+                {config.options.map((option) => (
+                  <CommandItem
+                    key={option}
+                    onSelect={() => handleFilterChange(config.key, option)}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <div className={cn(
+                        "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                        config.values.includes(option)
+                          ? "bg-primary text-primary-foreground"
+                          : "opacity-50 [&_svg]:invisible"
+                      )}>
+                        <Search className="h-3 w-3" />
+                      </div>
+                      <span>{option}</span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      
+      {config.values.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {config.values.slice(0, 3).map((value) => (
+            <Badge 
+              key={value} 
+              variant="secondary" 
+              className="text-xs cursor-pointer hover:bg-red-100"
+              onClick={() => handleFilterChange(config.key, value)}
+            >
+              {value}
+              <X className="h-3 w-3 ml-1" />
+            </Badge>
+          ))}
+          {config.values.length > 3 && (
+            <Badge variant="outline" className="text-xs">
+              +{config.values.length - 3} more
+            </Badge>
+          )}
+        </div>
+      )}
+      
+      <p className="text-xs text-gray-500 mt-1">{config.description}</p>
+    </div>
+  );
 
   return (
-    <Card className={`bg-white/80 backdrop-blur-sm border-0 shadow-xl ${className}`}>
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer hover:bg-slate-50/50 transition-colors rounded-t-lg">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-slate-800">
-                <Filter className="w-5 h-5 text-blue-600" />
-                Advanced Filters
-                {activeFiltersCount > 0 && (
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                    {activeFiltersCount} active
-                  </Badge>
-                )}
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                {activeFiltersCount > 0 && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      clearAllFilters();
-                    }}
-                    className="gap-2"
-                  >
-                    <X className="w-3 h-3" />
-                    Clear All
-                  </Button>
-                )}
-                {isOpen ? (
-                  <ChevronUp className="w-4 h-4 text-slate-600" />
-                ) : (
-                  <ChevronDown className="w-4 h-4 text-slate-600" />
-                )}
-              </div>
+    <Card className="bg-white shadow-sm border border-gray-200">
+      <CardHeader className="border-b border-gray-100">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-gray-800 flex items-center gap-2">
+            <Filter className="w-5 h-5 text-blue-600" />
+            Lead Filters
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            {activeFilterCount > 0 && (
+              <Badge className="bg-blue-600 text-white">
+                {activeFilterCount} Active
+              </Badge>
+            )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={clearAllFilters}
+              disabled={activeFilterCount === 0}
+              className="gap-1"
+            >
+              <X className="h-4 w-4" />
+              Clear All
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="p-6">
+        <Tabs defaultValue="filters" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="filters">Filter Options</TabsTrigger>
+            <TabsTrigger value="dateRange">Date Range</TabsTrigger>
+            <TabsTrigger value="ltvRange">LTV Range</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="filters" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filterConfigs.map((config) => (
+                <MultiSelectFilter key={config.key} config={config} />
+              ))}
             </div>
-          </CardHeader>
-        </CollapsibleTrigger>
-
-        <CollapsibleContent>
-          <CardContent className="space-y-6">
-            {/* Date Range */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          </TabsContent>
+          
+          <TabsContent value="dateRange" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <CalendarIcon className="w-4 h-4" />
-                  Start Date
-                </Label>
+                <div className="flex items-center justify-between">
+                  <label className="font-medium text-sm text-gray-700 flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4" />
+                    Start Date
+                  </label>
+                  {filters.dateRange.start && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDateRangeChange('start', null)}
+                      className="h-6 px-2 text-xs"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !filters.dateRange.start && "text-muted-foreground"
-                      )}
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start text-left font-normal"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {filters.dateRange.start ? (
-                        format(new Date(filters.dateRange.start), "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
+                      {filters.dateRange.start 
+                        ? format(new Date(filters.dateRange.start), 'PPP')
+                        : 'Select start date'
+                      }
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
                       mode="single"
                       selected={filters.dateRange.start ? new Date(filters.dateRange.start) : undefined}
-                      onSelect={(date) => handleDateChange('start', date)}
+                      onSelect={(date) => handleDateRangeChange('start', date)}
+                      disabled={(date) => 
+                        filters.dateRange.end 
+                          ? date > new Date(filters.dateRange.end)
+                          : false
+                      }
                       initialFocus
-                      className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>
               </div>
+              
               <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <CalendarIcon className="w-4 h-4" />
-                  End Date
-                </Label>
+                <div className="flex items-center justify-between">
+                  <label className="font-medium text-sm text-gray-700 flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4" />
+                    End Date
+                  </label>
+                  {filters.dateRange.end && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDateRangeChange('end', null)}
+                      className="h-6 px-2 text-xs"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !filters.dateRange.end && "text-muted-foreground"
-                      )}
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start text-left font-normal"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {filters.dateRange.end ? (
-                        format(new Date(filters.dateRange.end), "PPP")
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
+                      {filters.dateRange.end 
+                        ? format(new Date(filters.dateRange.end), 'PPP')
+                        : 'Select end date'
+                      }
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
                       mode="single"
                       selected={filters.dateRange.end ? new Date(filters.dateRange.end) : undefined}
-                      onSelect={(date) => handleDateChange('end', date)}
+                      onSelect={(date) => handleDateRangeChange('end', date)}
+                      disabled={(date) => 
+                        filters.dateRange.start
+                          ? date < new Date(filters.dateRange.start)
+                          : false
+                      }
                       initialFocus
-                      className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
+          </TabsContent>
 
-            {/* Multi-select Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Locations */}
+          <TabsContent value="ltvRange" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <MapPin className="w-4 h-4" />
-                  Locations ({filters.location.length})
+                <Label htmlFor="minLTV" className="text-sm font-medium">
+                  Minimum LTV
                 </Label>
-                <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
-                  {uniqueValues.locations.map(location => (
-                    <label key={location} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 p-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={filters.location.includes(location)}
-                        onChange={(e) => handleArrayFilterChange('location', location, e.target.checked)}
-                        className="rounded"
-                      />
-                      <span className="text-slate-700">{location}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sources */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <Target className="w-4 h-4" />
-                  Sources ({filters.source.length})
-                </Label>
-                <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
-                  {uniqueValues.sources.map(source => (
-                    <label key={source} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 p-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={filters.source.includes(source)}
-                        onChange={(e) => handleArrayFilterChange('source', source, e.target.checked)}
-                        className="rounded"
-                      />
-                      <span className="text-slate-700">{source}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Stages */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <TrendingUp className="w-4 h-4" />
-                  Stages ({filters.stage.length})
-                </Label>
-                <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
-                  {uniqueValues.stages.map(stage => (
-                    <label key={stage} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 p-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={filters.stage.includes(stage)}
-                        onChange={(e) => handleArrayFilterChange('stage', stage, e.target.checked)}
-                        className="rounded"
-                      />
-                      <span className="text-slate-700">{stage}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Associates */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                  <Users className="w-4 h-4" />
-                  Associates ({filters.associate.length})
-                </Label>
-                <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
-                  {uniqueValues.associates.map(associate => (
-                    <label key={associate} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 p-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={filters.associate.includes(associate)}
-                        onChange={(e) => handleArrayFilterChange('associate', associate, e.target.checked)}
-                        className="rounded"
-                      />
-                      <span className="text-slate-700">{associate}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Status */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-700">
-                  Status ({filters.status.length})
-                </Label>
-                <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
-                  {uniqueValues.statuses.map(status => (
-                    <label key={status} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 p-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={filters.status.includes(status)}
-                        onChange={(e) => handleArrayFilterChange('status', status, e.target.checked)}
-                        className="rounded"
-                      />
-                      <span className="text-slate-700">{status}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Conversion Status */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-700">
-                  Conversion Status ({filters.conversionStatus.length})
-                </Label>
-                <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
-                  {uniqueValues.conversionStatuses.map(status => (
-                    <label key={status} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 p-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={filters.conversionStatus.includes(status)}
-                        onChange={(e) => handleArrayFilterChange('conversionStatus', status, e.target.checked)}
-                        className="rounded"
-                      />
-                      <span className="text-slate-700">{status}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Trial Status */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-700">
-                  Trial Status ({filters.trialStatus.length})
-                </Label>
-                <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
-                  {uniqueValues.trialStatuses.map(status => (
-                    <label key={status} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 p-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={filters.trialStatus.includes(status)}
-                        onChange={(e) => handleArrayFilterChange('trialStatus', status, e.target.checked)}
-                        className="rounded"
-                      />
-                      <span className="text-slate-700">{status}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Channel */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-700">
-                  Channel ({filters.channel.length})
-                </Label>
-                <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
-                  {uniqueValues.channels.map(channel => (
-                    <label key={channel} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 p-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={filters.channel.includes(channel)}
-                        onChange={(e) => handleArrayFilterChange('channel', channel, e.target.checked)}
-                        className="rounded"
-                      />
-                      <span className="text-slate-700">{channel}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Retention Status */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-700">
-                  Retention Status ({filters.retentionStatus.length})
-                </Label>
-                <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">
-                  {uniqueValues.retentionStatuses.map(status => (
-                    <label key={status} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 p-1 rounded">
-                      <input
-                        type="checkbox"
-                        checked={filters.retentionStatus.includes(status)}
-                        onChange={(e) => handleArrayFilterChange('retentionStatus', status, e.target.checked)}
-                        className="rounded"
-                      />
-                      <span className="text-slate-700">{status}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* LTV Range */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-700">Min LTV</Label>
                 <Input
                   type="number"
-                  placeholder="Min LTV"
-                  value={filters.minLTV || ''}
-                  onChange={(e) => handleFilterChange('minLTV', e.target.value ? parseFloat(e.target.value) : undefined)}
+                  id="minLTV"
+                  placeholder="Enter minimum LTV"
+                  value={filters.minLTV !== undefined ? filters.minLTV.toString() : ''}
+                  onChange={(e) => {
+                    const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                    handleLTVChange('minLTV', value);
+                  }}
                 />
               </div>
+              
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-slate-700">Max LTV</Label>
+                <Label htmlFor="maxLTV" className="text-sm font-medium">
+                  Maximum LTV
+                </Label>
                 <Input
                   type="number"
-                  placeholder="Max LTV"
-                  value={filters.maxLTV || ''}
-                  onChange={(e) => handleFilterChange('maxLTV', e.target.value ? parseFloat(e.target.value) : undefined)}
+                  id="maxLTV"
+                  placeholder="Enter maximum LTV"
+                  value={filters.maxLTV !== undefined ? filters.maxLTV.toString() : ''}
+                  onChange={(e) => {
+                    const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                    handleLTVChange('maxLTV', value);
+                  }}
                 />
               </div>
             </div>
-
-            {/* Apply/Reset Actions */}
-            <div className="flex items-center justify-between pt-4 border-t">
-              <div className="text-sm text-slate-600">
-                {activeFiltersCount > 0 ? `${activeFiltersCount} filter(s) applied` : 'Default: Previous month data'}
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={clearAllFilters}
-                  className="gap-2"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  Reset to Previous Month
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </CollapsibleContent>
-      </Collapsible>
+          </TabsContent>
+        </Tabs>
+      </CardContent>
     </Card>
   );
 };

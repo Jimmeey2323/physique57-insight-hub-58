@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,7 +8,6 @@ import { ConversionRetentionFilterSection } from '@/components/dashboard/Convers
 import { EnhancedClientConversionMetrics } from '@/components/dashboard/EnhancedClientConversionMetrics';
 import { ConversionAnalyticsTables } from '@/components/dashboard/ConversionAnalyticsTables';
 import { ConversionMetricTabs } from '@/components/dashboard/ConversionMetricTabs';
-import { RefinedLoader } from '@/components/ui/RefinedLoader';
 import { ConversionRetentionFilters, ConversionMetricType } from '@/types/conversion';
 import { getPreviousMonthDateRange, parseDate } from '@/utils/dateUtils';
 import { formatCurrency, formatNumber, formatPercentage } from '@/utils/formatters';
@@ -179,7 +177,14 @@ export default function ConversionRetention() {
   }, [filteredData]);
 
   if (loading) {
-    return <RefinedLoader message="Loading conversion & retention data..." />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-slate-600 font-medium">Loading conversion & retention data...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
